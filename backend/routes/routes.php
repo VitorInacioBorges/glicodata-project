@@ -13,10 +13,6 @@ Route::get('/', function () {
     ]);
 });
 
-Route::get('/contact', function () {
-    return view('contact');
-});
-
 Route::get("/user/{id?}", function ($id = null) {
 
     $search = request("search");
@@ -28,7 +24,7 @@ Route::get("/user/{id?}", function ($id = null) {
     ]);
 });
 
-Route::post('/user', function (Request $request) {
+Route::post('/login', function (Request $request) {
 
     // Aqui você processa os dados vindos do formulário
 
@@ -37,3 +33,9 @@ Route::post('/user', function (Request $request) {
     return dd($data); // mostra os dados para confirmar
 })->name('web');
 
+//TODO Route::post("/create", function)
+//TODO Route::get("/list/patients", function)
+//TODO Route::get("/list/users", function)
+//TODO Route::get("/user", function)
+//TODO Route::delete("/delete", function)
+//TODO Route::put("/update", function)
