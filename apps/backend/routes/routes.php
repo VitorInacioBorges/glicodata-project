@@ -1,5 +1,13 @@
 <?php
 
+use App\Http\Controllers\AssessmentController;
+use App\Http\Controllers\DistrictController;
+use App\Http\Controllers\PatientController;
+use App\Http\Controllers\ReportController;
+use App\Http\Controllers\RiskController;
+use App\Http\Controllers\UbsController;
+use App\Http\Controllers\UserController;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 // Root route
@@ -30,9 +38,20 @@ Route::post('/login', function (Request $request) {
     return dd($data); // mostra os dados para confirmar
 })->name('web');
 
-//TODO Route::post("/create", function)
-//TODO Route::get("/list/patients", function)
-//TODO Route::get("/list/users", function)
-//TODO Route::get("/user", function)
-//TODO Route::delete("/delete", function)
-//TODO Route::put("/update", function)
+Route::prefix('api/v1')->group(function (): void {
+    Route::delete('districts/{id}/delete-self', [DistrictController::class, 'deleteSelf']);
+    Route::delete('ubs/{id}/delete-self', [UbsController::class, 'deleteSelf']);
+    Route::delete('users/{id}/delete-self', [UserController::class, 'deleteSelf']);
+    Route::delete('patients/{id}/delete-self', [PatientController::class, 'deleteSelf']);
+    Route::delete('assessments/{id}/delete-self', [AssessmentController::class, 'deleteSelf']);
+    Route::delete('risks/{id}/delete-self', [RiskController::class, 'deleteSelf']);
+    Route::delete('reports/{id}/delete-self', [ReportController::class, 'deleteSelf']);
+
+    Route::apiResource('districts', DistrictController::class);
+    Route::apiResource('ubs', UbsController::class);
+    Route::apiResource('users', UserController::class);
+    Route::apiResource('patients', PatientController::class);
+    Route::apiResource('assessments', AssessmentController::class);
+    Route::apiResource('risks', RiskController::class);
+    Route::apiResource('reports', ReportController::class);
+});
