@@ -2,26 +2,23 @@
 
 use Illuminate\Support\Facades\Route;
 
+// Root route
 Route::get('/', function () {
-    $nome = "Vitor";
-    $array = [10, 20, 30, 40, 50];
-
-    return view('welcome',
-    [
-        "nome" => $nome,
-        "array" => $array,
-    ]);
+    return view('home');
 });
 
-Route::get("/user/{id?}", function ($id = null) {
+// Register route
+Route::get("/register/{id?}", function ($id = null) {
 
     $search = request("search");
 
-    return view("user", 
-    [
-        "search" => $search,
-        "id" => $id, 
-    ]);
+    return view(
+        "register",
+        [
+            "search" => $search,
+            "id" => $id,
+        ]
+    );
 });
 
 Route::post('/login', function (Request $request) {

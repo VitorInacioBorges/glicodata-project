@@ -4,7 +4,8 @@
 
 @section("content")
 
-<h1> Site Vitor </h1>
+<h1> Sistema UBS </h1>
 
 <a href="/contact"> Contatos </a> <br>
-<a href="/user"> Users </a>
+<a href="/register"> Cadastrar </a>
+<a href="/login"> Login </a>

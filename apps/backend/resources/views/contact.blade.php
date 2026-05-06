@@ -4,7 +4,7 @@
 
 @section("content")
 
-<h1> Contatos </h1>
-<a href="/"> Inicio </a>
+    <h1> Contatos </h1>
+    <a href="/"> Inicio </a>
 
 @endsection

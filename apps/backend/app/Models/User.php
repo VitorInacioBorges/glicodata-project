@@ -1,16 +1,22 @@
 <?php
 
+// Representa o model, e a tabela por conseguinte, da tabela USUARIO (usuario do sistema, um admin ou usuario normal tratado como medico generalista) 
+
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Enums\UserRole;
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable;
+    use HasFactory, HasUuids, Notifiable;
 
     /**
      * The attributes that are mass assignable.
@@ -18,9 +24,16 @@ class User extends Authenticatable
      * @var list<string>
      */
     protected $fillable = [
+        'ubs_id',
         'name',
+        'age',
+        'sex',
+        'cpf',
+        'address',
+        'phone',
         'email',
         'password',
+        'role',
     ];
 
     /**
@@ -42,7 +55,26 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
+            'age' => 'integer',
+            'sex' => 'boolean',
             'password' => 'hashed',
+            'role' => UserRole::class,
         ];
+    }
+
+    /**
+     * @return BelongsTo<Ubs, $this>
+     */
+    public function ubs(): BelongsTo
+    {
+        return $this->belongsTo(Ubs::class);
+    }
+
+    /**
+     * @return HasMany<Assessment, $this>
+     */
+    public function assessments(): HasMany
+    {
+        return $this->hasMany(Assessment::class);
     }
 }
