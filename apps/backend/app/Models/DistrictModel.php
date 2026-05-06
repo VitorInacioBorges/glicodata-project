@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class District extends Model
+class DistrictModel extends Model
 {
     /** @use HasFactory<\Database\Factories\DistrictFactory> */
     use HasFactory, HasUuids;
@@ -16,11 +16,13 @@ class District extends Model
         'name',
     ];
 
+    protected $table = 'districts';
+
     /**
-     * @return HasMany<Ubs, $this>
+     * @return HasMany<UbsModel, $this>
      */
     public function ubs(): HasMany
     {
-        return $this->hasMany(Ubs::class);
+        return $this->hasMany(UbsModel::class, 'district_id');
     }
 }

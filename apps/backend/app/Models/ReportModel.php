@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class Report extends Model
+class ReportModel extends Model
 {
     /** @use HasFactory<\Database\Factories\ReportFactory> */
     use HasFactory, HasUuids;
@@ -21,11 +21,13 @@ class Report extends Model
         'title',
     ];
 
+    protected $table = 'reports';
+
     /**
-     * @return BelongsTo<Assessment, $this>
+     * @return BelongsTo<AssessmentModel, $this>
      */
     public function assessment(): BelongsTo
     {
-        return $this->belongsTo(Assessment::class);
+        return $this->belongsTo(AssessmentModel::class, 'assessment_id');
     }
 }

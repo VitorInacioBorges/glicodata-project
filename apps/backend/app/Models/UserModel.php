@@ -13,7 +13,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-class User extends Authenticatable
+class UserModel extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, HasUuids, Notifiable;
@@ -35,6 +35,8 @@ class User extends Authenticatable
         'password',
         'role',
     ];
+
+    protected $table = 'users';
 
     /**
      * The attributes that should be hidden for serialization.
@@ -63,18 +65,18 @@ class User extends Authenticatable
     }
 
     /**
-     * @return BelongsTo<Ubs, $this>
+     * @return BelongsTo<UbsModel, $this>
      */
     public function ubs(): BelongsTo
     {
-        return $this->belongsTo(Ubs::class);
+        return $this->belongsTo(UbsModel::class, 'ubs_id');
     }
 
     /**
-     * @return HasMany<Assessment, $this>
+     * @return HasMany<AssessmentModel, $this>
      */
     public function assessments(): HasMany
     {
-        return $this->hasMany(Assessment::class);
+        return $this->hasMany(AssessmentModel::class, 'user_id');
     }
 }

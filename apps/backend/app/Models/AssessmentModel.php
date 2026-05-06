@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
-class Assessment extends Model
+class AssessmentModel extends Model
 {
     /** @use HasFactory<\Database\Factories\AssessmentFactory> */
     use HasFactory, HasUuids;
@@ -23,6 +23,8 @@ class Assessment extends Model
         'answers',
     ];
 
+    protected $table = 'assessments';
+
     /**
      * @return array<string, string>
      */
@@ -34,42 +36,42 @@ class Assessment extends Model
     }
 
     /**
-     * @return BelongsTo<Patient, $this>
+     * @return BelongsTo<PatientModel, $this>
      */
     public function patient(): BelongsTo
     {
-        return $this->belongsTo(Patient::class);
+        return $this->belongsTo(PatientModel::class, 'patient_id');
     }
 
     /**
-     * @return BelongsTo<User, $this>
+     * @return BelongsTo<UserModel, $this>
      */
     public function user(): BelongsTo
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(UserModel::class, 'user_id');
     }
 
     /**
-     * @return BelongsTo<Ubs, $this>
+     * @return BelongsTo<UbsModel, $this>
      */
     public function ubs(): BelongsTo
     {
-        return $this->belongsTo(Ubs::class);
+        return $this->belongsTo(UbsModel::class, 'ubs_id');
     }
 
     /**
-     * @return HasOne<Risk, $this>
+     * @return HasOne<RiskModel, $this>
      */
     public function risk(): HasOne
     {
-        return $this->hasOne(Risk::class);
+        return $this->hasOne(RiskModel::class, 'assessment_id');
     }
 
     /**
-     * @return HasOne<Report, $this>
+     * @return HasOne<ReportModel, $this>
      */
     public function report(): HasOne
     {
-        return $this->hasOne(Report::class);
+        return $this->hasOne(ReportModel::class, 'assessment_id');
     }
 }

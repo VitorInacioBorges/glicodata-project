@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class Risk extends Model
+class RiskModel extends Model
 {
     /** @use HasFactory<\Database\Factories\RiskFactory> */
     use HasFactory, HasUuids;
@@ -23,6 +23,8 @@ class Risk extends Model
         'classification',
         'score',
     ];
+
+    protected $table = 'risks';
 
     /**
      * @return array<string, string>
@@ -37,10 +39,10 @@ class Risk extends Model
     }
 
     /**
-     * @return BelongsTo<Assessment, $this>
+     * @return BelongsTo<AssessmentModel, $this>
      */
     public function assessment(): BelongsTo
     {
-        return $this->belongsTo(Assessment::class);
+        return $this->belongsTo(AssessmentModel::class, 'assessment_id');
     }
 }

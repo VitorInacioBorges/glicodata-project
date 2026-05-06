@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class Patient extends Model
+class PatientModel extends Model
 {
     /** @use HasFactory<\Database\Factories\PatientFactory> */
     use HasFactory, HasUuids;
@@ -26,6 +26,8 @@ class Patient extends Model
         'birth',
     ];
 
+    protected $table = 'patients';
+
     /**
      * @return array<string, string>
      */
@@ -39,18 +41,18 @@ class Patient extends Model
     }
 
     /**
-     * @return BelongsTo<Ubs, $this>
+     * @return BelongsTo<UbsModel, $this>
      */
     public function ubs(): BelongsTo
     {
-        return $this->belongsTo(Ubs::class);
+        return $this->belongsTo(UbsModel::class, 'ubs_id');
     }
 
     /**
-     * @return HasMany<Assessment, $this>
+     * @return HasMany<AssessmentModel, $this>
      */
     public function assessments(): HasMany
     {
-        return $this->hasMany(Assessment::class);
+        return $this->hasMany(AssessmentModel::class, 'patient_id');
     }
 }
