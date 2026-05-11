@@ -33,39 +33,30 @@ Principais arquivos/artefatos em `test-project/`:
 Abaixo está um resumo objetivo do propósito das pastas que você encontrará em `test-project/`.
 
 - 📂 `app/`
-
   - Contém a lógica da aplicação: controllers, models, providers e outros serviços de domínio.
 
 - 🚀 `bootstrap/`
-
   - Inicialização do framework (ex.: `app.php`). A pasta `cache/` guarda arquivos otimizados para boot mais rápido.
 
 - ⚙️ `config/`
-
   - Arquivos de configuração (ex.: `app.php`, `database.php`). Prefira usar variáveis de ambiente no `.env` para personalização.
 
 - 🗄 `database/`
-
   - Migrations, seeders e factories para versionamento do schema e dados de teste.
 
 - 🌐 `public/`
-
   - Ponto de entrada público (index.php). Aqui ficam assets compilados e arquivos públicos.
 
 - 🎨 `resources/`
-
   - Views Blade (`resources/views`), assets não compilados (CSS/JS) e arquivos de tradução.
 
 - 🧭 `routes/`
-
   - Definição das rotas (`web.php`, `api.php`, etc.) que mapeiam requisições para controllers.
 
 - 🗂 `storage/`
-
   - Logs, uploads, cache e sessões. Não inclua arquivos de usuário no repositório.
 
 - ✅ `tests/`
-
   - Testes automatizados (Feature / Unit). Execute-os com `php artisan test`.
 
 - 📦 `vendor/`
@@ -140,3 +131,7 @@ Se precisar de ajuda, abra uma issue no repositório ou entre em contato com o m
 ---
 
 Versão: README formatado com emojis para melhor leitura e navegação.
+
+## Sessions
+
+codex resume 019e171c-5e24-7371-b4cb-30138e1839c2
