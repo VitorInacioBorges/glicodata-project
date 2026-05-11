@@ -9,6 +9,12 @@ return Application::configure(basePath: dirname(__DIR__))
         web: __DIR__.'/../routes/routes.php',
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
+        then: function () {
+        foreach (glob(base_path('routes/*.routes.php')) as $file) {
+            Route::middleware('api')
+                ->group($file);
+        }
+    },
     )
     ->withMiddleware(function (Middleware $middleware): void {
         //
