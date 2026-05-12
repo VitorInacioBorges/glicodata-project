@@ -4,11 +4,14 @@ namespace App\Services;
 
 use App\Models\UbsModel;
 use App\Repositories\UbsRepository;
+use App\Utils\ValidateUtils;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 
 class UbsService
 {
+    use ValidateUtils;
+
     public function __construct(
         protected UbsRepository $repository,
     ) {
@@ -21,6 +24,8 @@ class UbsService
 
     public function getUbsById(string $id): UbsModel
     {
+        $this->validateId($id);
+
         $ubs = $this->repository->findUbsById($id);
 
         if ($ubs === null) {
@@ -32,6 +37,8 @@ class UbsService
 
     public function getUbsByEmail(string $email): UbsModel
     {
+        $this->validateEmail($email);
+
         $ubs = $this->repository->findUbsByEmail($email);
 
         if ($ubs === null) {

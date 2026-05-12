@@ -4,11 +4,14 @@ namespace App\Services;
 
 use App\Models\PatientModel;
 use App\Repositories\PatientRepository;
+use App\Utils\ValidateUtils;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 
 class PatientService
 {
+    use ValidateUtils;
+
     public function __construct(
         protected PatientRepository $repository,
     ) {
@@ -21,6 +24,8 @@ class PatientService
 
     public function getPatientById(string $id): PatientModel
     {
+        $this->validateId($id);
+
         $patient = $this->repository->findPatientById($id);
 
         if ($patient === null) {

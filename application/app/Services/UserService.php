@@ -4,11 +4,14 @@ namespace App\Services;
 
 use App\Models\UserModel;
 use App\Repositories\UserRepository;
+use App\Utils\ValidateUtils;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 
 class UserService
 {
+    use ValidateUtils;
+
     public function __construct(
         protected UserRepository $repository,
     ) {
@@ -21,6 +24,8 @@ class UserService
 
     public function getUserById(string $id): UserModel
     {
+        $this->validateId($id);
+
         $user = $this->repository->findUserById($id);
 
         if ($user === null) {
@@ -32,6 +37,8 @@ class UserService
 
     public function getUserByEmail(string $email): UserModel
     {
+        $this->validateEmail($email);
+
         $user = $this->repository->findUserByEmail($email);
 
         if ($user === null) {

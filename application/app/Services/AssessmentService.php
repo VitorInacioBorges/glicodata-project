@@ -4,11 +4,14 @@ namespace App\Services;
 
 use App\Models\AssessmentModel;
 use App\Repositories\AssessmentRepository;
+use App\Utils\ValidateUtils;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 
 class AssessmentService
 {
+    use ValidateUtils;
+
     public function __construct(
         protected AssessmentRepository $repository,
     ) {
@@ -21,6 +24,8 @@ class AssessmentService
 
     public function getAssessmentById(string $id): AssessmentModel
     {
+        $this->validateId($id);
+
         $assessment = $this->repository->findAssessmentById($id);
 
         if ($assessment === null) {

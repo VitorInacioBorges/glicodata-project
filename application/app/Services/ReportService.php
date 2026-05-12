@@ -4,11 +4,14 @@ namespace App\Services;
 
 use App\Models\ReportModel;
 use App\Repositories\ReportRepository;
+use App\Utils\ValidateUtils;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 
 class ReportService
 {
+    use ValidateUtils;
+
     public function __construct(
         protected ReportRepository $repository,
     ) {
@@ -21,6 +24,8 @@ class ReportService
 
     public function getReportById(string $id): ReportModel
     {
+        $this->validateId($id);
+
         $report = $this->repository->findReportById($id);
 
         if ($report === null) {

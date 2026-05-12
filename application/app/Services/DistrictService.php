@@ -4,11 +4,14 @@ namespace App\Services;
 
 use App\Models\DistrictModel;
 use App\Repositories\DistrictRepository;
+use App\Utils\ValidateUtils;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 
 class DistrictService
 {
+    use ValidateUtils;
+
     public function __construct(
         protected DistrictRepository $repository,
     ) {
@@ -21,6 +24,8 @@ class DistrictService
 
     public function getDistrictById(string $id): DistrictModel
     {
+        $this->validateId($id);
+
         $district = $this->repository->findDistrictById($id);
 
         if ($district === null) {

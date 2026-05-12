@@ -4,11 +4,14 @@ namespace App\Services;
 
 use App\Models\RiskModel;
 use App\Repositories\RiskRepository;
+use App\Utils\ValidateUtils;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 
 class RiskService
 {
+    use ValidateUtils;
+
     public function __construct(
         protected RiskRepository $repository,
     ) {
@@ -21,6 +24,8 @@ class RiskService
 
     public function getRiskById(string $id): RiskModel
     {
+        $this->validateId($id);
+
         $risk = $this->repository->findRiskById($id);
 
         if ($risk === null) {
