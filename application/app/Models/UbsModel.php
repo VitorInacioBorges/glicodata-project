@@ -1,6 +1,7 @@
 <?php
 
 // Representa o model, e a tabela por conseguinte, da tabela UBS (ubs atrelada a um distrito especifico e que possui usuarios e pacientes) 
+// nao deve possuir formas de delecao para esse tipo de dado que nao sejam HARD DELETE
 
 namespace App\Models;
 
