@@ -53,6 +53,12 @@ class UserService
      */
     public function createUser(array $data): UserModel
     {
+        if (isset($data['email']) && is_string($data['email'])) {
+            $this->validateEmail($data['email']);
+        }
+
+        $this->validateCreateUserData($data);
+
         return $this->repository->createUser($data);
     }
 
@@ -62,6 +68,13 @@ class UserService
     public function updateUser(string $id, array $data): UserModel
     {
         $user = $this->getUserById($id);
+
+        if (isset($data['email']) && is_string($data['email'])) {
+            $this->validateEmail($data['email']);
+        }
+
+        $this->validateUpdateUserData($data, $id);
+
         $user->fill($data);
         $user->save();
 

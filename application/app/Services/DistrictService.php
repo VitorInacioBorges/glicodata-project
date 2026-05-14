@@ -40,6 +40,8 @@ class DistrictService
      */
     public function createDistrict(array $data): DistrictModel
     {
+        $this->validateCreateDistrictData($data);
+
         return $this->repository->createDistrict($data);
     }
 
@@ -49,6 +51,8 @@ class DistrictService
     public function updateDistrict(string $id, array $data): DistrictModel
     {
         $district = $this->getDistrictById($id);
+        $this->validateUpdateDistrictData($data);
+
         $district->fill($data);
         $district->save();
 

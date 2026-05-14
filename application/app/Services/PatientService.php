@@ -40,6 +40,8 @@ class PatientService
      */
     public function createPatient(array $data): PatientModel
     {
+        $this->validateCreatePatientData($data);
+
         return $this->repository->createPatient($data);
     }
 
@@ -49,6 +51,8 @@ class PatientService
     public function updatePatient(string $id, array $data): PatientModel
     {
         $patient = $this->getPatientById($id);
+        $this->validateUpdatePatientData($data, $id);
+
         $patient->fill($data);
         $patient->save();
 

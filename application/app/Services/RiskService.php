@@ -40,6 +40,8 @@ class RiskService
      */
     public function createRisk(array $data): RiskModel
     {
+        $this->validateCreateRiskData($data);
+
         return $this->repository->createRisk($data);
     }
 
@@ -49,6 +51,8 @@ class RiskService
     public function updateRisk(string $id, array $data): RiskModel
     {
         $risk = $this->getRiskById($id);
+        $this->validateUpdateRiskData($data, $id);
+
         $risk->fill($data);
         $risk->save();
 

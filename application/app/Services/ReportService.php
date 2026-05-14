@@ -40,6 +40,8 @@ class ReportService
      */
     public function createReport(array $data): ReportModel
     {
+        $this->validateCreateReportData($data);
+
         return $this->repository->createReport($data);
     }
 
@@ -49,6 +51,8 @@ class ReportService
     public function updateReport(string $id, array $data): ReportModel
     {
         $report = $this->getReportById($id);
+        $this->validateUpdateReportData($data, $id);
+
         $report->fill($data);
         $report->save();
 

@@ -40,6 +40,8 @@ class AssessmentService
      */
     public function createAssessment(array $data): AssessmentModel
     {
+        $this->validateCreateAssessmentData($data);
+
         return $this->repository->createAssessment($data);
     }
 
@@ -49,6 +51,8 @@ class AssessmentService
     public function updateAssessment(string $id, array $data): AssessmentModel
     {
         $assessment = $this->getAssessmentById($id);
+        $this->validateUpdateAssessmentData($data);
+
         $assessment->fill($data);
         $assessment->save();
 

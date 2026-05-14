@@ -53,6 +53,12 @@ class UbsService
      */
     public function createUbs(array $data): UbsModel
     {
+        if (isset($data['email']) && is_string($data['email'])) {
+            $this->validateEmail($data['email']);
+        }
+
+        $this->validateCreateUbsData($data);
+
         return $this->repository->createUbs($data);
     }
 
@@ -62,6 +68,13 @@ class UbsService
     public function updateUbs(string $id, array $data): UbsModel
     {
         $ubs = $this->getUbsById($id);
+
+        if (isset($data['email']) && is_string($data['email'])) {
+            $this->validateEmail($data['email']);
+        }
+
+        $this->validateUpdateUbsData($data, $id);
+
         $ubs->fill($data);
         $ubs->save();
 
