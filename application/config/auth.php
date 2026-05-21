@@ -40,6 +40,14 @@ return [
             'driver' => 'session',
             'provider' => 'users',
         ],
+        'ubs' => [
+            'driver' => 'session',
+            'provider' => 'ubs',
+        ],
+        'keycloak' => [
+            'driver' => 'keycloak',
+            'provider' => 'ubs',
+        ],
     ],
 
     /*
@@ -63,6 +71,10 @@ return [
         'users' => [
             'driver' => 'eloquent',
             'model' => env('AUTH_MODEL', App\Models\UserModel::class),
+        ],
+        'ubs' => [
+            'driver' => 'eloquent',
+            'model' => App\Models\UbsModel::class,
         ],
 
         // 'users' => [

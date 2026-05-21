@@ -5,7 +5,6 @@ namespace Database\Factories;
 use App\Models\DistrictModel;
 use App\Models\UbsModel;
 use Illuminate\Database\Eloquent\Factories\Factory;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 
 /**
@@ -14,11 +13,6 @@ use Illuminate\Support\Str;
 class UserFactory extends Factory
 {
     protected $model = \App\Models\UserModel::class;
-
-    /**
-     * The current password being used by the factory.
-     */
-    protected static ?string $password;
 
     /**
      * Define the model's default state.
@@ -40,6 +34,7 @@ class UserFactory extends Factory
                     'address' => fake()->address(),
                     'phone' => fake()->numerify('###########'),
                     'email' => fake()->unique()->safeEmail(),
+                    'keycloak_id' => (string) fake()->uuid(),
                     'is_active' => true,
                 ])->id;
             },
@@ -51,7 +46,7 @@ class UserFactory extends Factory
             'phone' => fake()->numerify('###########'),
             'email' => fake()->unique()->safeEmail(),
             'email_verified_at' => now(),
-            'password' => static::$password ??= Hash::make('password'),
+            'password' => null,
             'role' => fake()->randomElement(['admin', 'user']),
             'remember_token' => Str::random(10),
         ];

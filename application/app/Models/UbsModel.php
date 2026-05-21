@@ -7,11 +7,11 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Foundation\Auth\User as Authenticatable;
 
-class UbsModel extends Model
+class UbsModel extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UbsFactory> */
     use HasFactory, HasUuids;
@@ -25,7 +25,16 @@ class UbsModel extends Model
         'address',
         'phone',
         'email',
+        'password',
+        'keycloak_id',
         'is_active',
+    ];
+
+    /**
+     * @var list<string>
+     */
+    protected $hidden = [
+        'password',
     ];
 
     /**
@@ -34,6 +43,7 @@ class UbsModel extends Model
     protected function casts(): array
     {
         return [
+            'password' => 'hashed',
             'is_active' => 'boolean',
         ];
     }

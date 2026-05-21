@@ -28,6 +28,7 @@ class DatabaseSeeder extends Seeder
             'address' => 'Rua Teste, 100',
             'phone' => '42999999999',
             'email' => 'ubs@example.com',
+            'keycloak_id' => 'ubs-teste-keycloak-id',
             'is_active' => true,
         ]);
 

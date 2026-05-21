@@ -75,6 +75,8 @@ trait ValidateUtils
             'address' => ['required', 'string', 'max:255'],
             'phone' => ['required', 'string', 'max:30'],
             'email' => ['required', 'email:rfc', 'max:255', Rule::unique('ubs', 'email')],
+            'password' => ['nullable', 'string', 'min:8', 'max:255'],
+            'keycloak_id' => ['nullable', 'string', 'max:255', Rule::unique('ubs', 'keycloak_id')],
             'is_active' => ['required', 'boolean'],
         ]);
     }
@@ -92,6 +94,8 @@ trait ValidateUtils
             'address' => ['sometimes', 'required', 'string', 'max:255'],
             'phone' => ['sometimes', 'required', 'string', 'max:30'],
             'email' => ['sometimes', 'required', 'email:rfc', 'max:255', Rule::unique('ubs', 'email')->ignore($id)],
+            'password' => ['sometimes', 'nullable', 'string', 'min:8', 'max:255'],
+            'keycloak_id' => ['sometimes', 'nullable', 'string', 'max:255', Rule::unique('ubs', 'keycloak_id')->ignore($id)],
             'is_active' => ['sometimes', 'required', 'boolean'],
         ]);
     }
@@ -111,7 +115,7 @@ trait ValidateUtils
             'address' => ['required', 'string', 'max:255'],
             'phone' => ['required', 'string', 'max:30'],
             'email' => ['required', 'email:rfc', 'max:255', Rule::unique('users', 'email')],
-            'password' => ['required', 'string', 'min:8', 'max:255'],
+            'password' => ['nullable', 'string', 'min:8', 'max:255'],
             'role' => ['required', Rule::in($this->userRoleValues())],
         ]);
     }
@@ -131,7 +135,7 @@ trait ValidateUtils
             'address' => ['sometimes', 'required', 'string', 'max:255'],
             'phone' => ['sometimes', 'required', 'string', 'max:30'],
             'email' => ['sometimes', 'required', 'email:rfc', 'max:255', Rule::unique('users', 'email')->ignore($id)],
-            'password' => ['sometimes', 'required', 'string', 'min:8', 'max:255'],
+            'password' => ['sometimes', 'nullable', 'string', 'min:8', 'max:255'],
             'role' => ['sometimes', 'required', Rule::in($this->userRoleValues())],
         ]);
     }

@@ -1,13 +1,23 @@
 <?php
 
-use App\Http\Controllers\AssessmentController;
-use App\Http\Controllers\DistrictController;
-use App\Http\Controllers\PatientController;
-use App\Http\Controllers\ReportController;
-use App\Http\Controllers\RiskController;
-use App\Http\Controllers\UbsController;
-use App\Http\Controllers\UserController;
+use App\Http\Controllers\AssessmentControllers\AssessmentController;
+use App\Http\Controllers\DistrictControllers\DistrictController;
+use App\Http\Controllers\PatientControllers\PatientController;
+use App\Http\Controllers\ReportControllers\ReportController;
+use App\Http\Controllers\RiskControllers\RiskController;
+use App\Http\Controllers\UbsControllers\UbsAuthController;
+use App\Http\Controllers\UbsControllers\UbsController;
+use App\Http\Controllers\UserControllers\UserController;
 use Illuminate\Support\Facades\Route;
+
+Route::prefix('auth/ubs')->group(function (): void {
+    Route::get('login', [UbsAuthController::class, 'redirect'])->name('ubs.auth.login');
+    Route::get('callback', [UbsAuthController::class, 'callback'])->name('ubs.auth.callback');
+});
+
+Route::middleware('auth:keycloak')->group(function (): void {
+    Route::get('auth/ubs/me', [UbsAuthController::class, 'me'])->name('ubs.auth.me');
+    Route::get('auth/ubs/logout', [UbsAuthController::class, 'logout'])->name('ubs.auth.logout');
 
 /*
 |--------------------------------------------------------------------------
@@ -120,3 +130,4 @@ Route::apiResource('risks', RiskController::class)
 Route::delete('reports/{id}/delete-self', [ReportController::class, 'deleteSelf']);
 Route::apiResource('reports', ReportController::class)
     ->parameters(['reports' => 'id']);
+});

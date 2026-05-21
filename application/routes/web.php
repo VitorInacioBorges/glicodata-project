@@ -1,6 +1,5 @@
 <?php
 
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -18,8 +17,6 @@ Route::get('/register/{id?}', function (?string $id = null) {
     ]);
 })->name('register');
 
-Route::post('/login', function (Request $request) {
-    $data = $request->all();
-
-    return dd($data);
+Route::post('/login', function () {
+    return redirect()->route('ubs.auth.login');
 })->name('web');

@@ -19,6 +19,8 @@ return new class extends Migration
             $table->string('address');
             $table->string('phone', 30);
             $table->string('email')->unique();
+            $table->string('password')->nullable();
+            $table->string('keycloak_id')->nullable()->unique();
             $table->boolean('is_active')->default(true);
             $table->timestamps();
 
