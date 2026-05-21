@@ -8,7 +8,8 @@ Essa escolha resolve tres necessidades centrais deste projeto:
 
 1. **Organizacao por recurso**: distritos, UBS, usuarios, pacientes, avaliacoes, riscos e relatorios seguem o mesmo fluxo de controller, service, repository e model.
 2. **Reuso de regras de aplicacao**: validacoes de UUID, busca por email, paginacao e delecao ficam nos services e nao precisam ser repetidas nos controllers.
-3. **Evolucao gradual**: a base ainda usa Request direto e Eloquent Models, mas a separacao atual permite adicionar Form Requests, Resources, Policies e testes especificos sem reescrever a API.
+3. **Evolucao gradual**: a base ainda usa Request direto e Eloquent Models, mas a separacao atual permite adicionar Form Requests, Resources e testes especificos sem reescrever a API.
+4. **Controle de acesso por UBS**: a API usa Keycloak/OpenID para autenticar a UBS e policies para limitar o acesso aos dados vinculados a unidade autenticada.
 
 Na interface web, a arquitetura usa **Blade templates** com um layout base, paginas simples e assets publicos. O Vite esta configurado para compilar `resources/css/app.css` e `resources/js/app.js`, enquanto algumas telas usam CSS em `public/css`.
 
@@ -23,8 +24,13 @@ Na interface web, a arquitetura usa **Blade templates** com um layout base, pagi
 └──────────────────────────────┬──────────────────────────────┘
                                │
 ┌──────────────────────────────▼──────────────────────────────┐
+│                    Auth Keycloak / Policies                 │
+│  Guard keycloak resolve UBS e Gates autorizam por entidade  │
+└──────────────────────────────┬──────────────────────────────┘
+                               │
+┌──────────────────────────────▼──────────────────────────────┐
 │                        Controllers                          │
-│  Recebem Request, query string per_page e parametros de rota│
+│  Recebem Request, aplicam Gate e coordenam respostas JSON   │
 └──────────────────────────────┬──────────────────────────────┘
                                │
 ┌──────────────────────────────▼──────────────────────────────┐
@@ -74,24 +80,38 @@ Na interface web, a arquitetura usa **Blade templates** com um layout base, pagi
 ### API: Criacao de Paciente
 
 ```text
-1. Cliente envia POST /api/patients com body JSON ou form data.
-2. Laravel roteia para PatientController@store.
-3. Controller repassa $request->all() para PatientService::createPatient().
-4. Service delega para PatientRepository::createPatient().
-5. Repository cria o registro via PatientModel::newQuery()->create($data).
-6. Eloquent aplica fillable e casts do PatientModel.
-7. Controller retorna JSON com status 201.
+1. Cliente envia POST /api/patients com body JSON e Authorization: Bearer <token>.
+2. O guard keycloak valida o token no Keycloak e resolve a UBS ativa.
+3. Laravel roteia para PatientControllers\PatientController@store.
+4. Controller autoriza a operacao com PatientPolicy.
+5. Controller repassa $request->all() para PatientService::createPatient().
+6. Service delega para PatientRepository::createPatient().
+7. Repository cria o registro via PatientModel::newQuery()->create($data).
+8. Eloquent aplica fillable e casts do PatientModel.
+9. Controller retorna JSON com status 201.
 ```
 
 ### API: Consulta por ID
 
 ```text
-1. Cliente envia GET /api/users/{id}.
-2. UserController@show chama UserService::getUserById($id).
+1. Cliente envia GET /api/users/{id} com Authorization: Bearer <token>.
+2. UserControllers\UserController@show chama UserService::getUserById($id).
 3. ValidateUtils::validateId() exige UUID valido.
 4. UserRepository::findUserById($id) busca o registro via Eloquent.
 5. Se nao encontrar, o service lanca ModelNotFoundException.
-6. Se encontrar, o model e serializado em JSON.
+6. Se encontrar, o controller autoriza acesso com UserPolicy.
+7. Se autorizado, o model e serializado em JSON.
+```
+
+### API: Login da UBS pelo Keycloak
+
+```text
+1. Cliente acessa GET /api/auth/ubs/login.
+2. UbsAuthController redireciona para o provider Keycloak via Socialite.
+3. Keycloak autentica a conta institucional da UBS.
+4. Callback GET /api/auth/ubs/callback recebe o usuario autenticado.
+5. KeycloakUbsAuthService localiza UBS ativa por keycloak_id ou email.
+6. API retorna access_token, refresh_token, expires_in e dados da UBS.
 ```
 
 ### Web: Formulario de Registro
@@ -100,7 +120,7 @@ Na interface web, a arquitetura usa **Blade templates** com um layout base, pagi
 1. Cliente acessa GET /register/{id?}.
 2. A rota renderiza resources/views/register.blade.php.
 3. O formulario envia POST para a rota nomeada web, exposta como /login.
-4. A rota atual faz dump dos dados recebidos com dd($data).
+4. A rota redireciona para `ubs.auth.login`, usando Keycloak como fonte principal de autenticacao.
 ```
 
 ---
@@ -113,7 +133,7 @@ O projeto usa injecao de dependencia do container do Laravel por construtor:
 class UserController extends Controller
 {
     public function __construct(
-        protected UserService $service,
+        protected \App\Services\UserServices\UserService $service,
     ) {
     }
 }
@@ -125,7 +145,7 @@ Cada service recebe seu repository correspondente, e cada repository recebe o mo
 class UserService
 {
     public function __construct(
-        protected UserRepository $repository,
+        protected \App\Repositories\UserRepositories\UserRepository $repository,
     ) {
     }
 }
@@ -162,4 +182,4 @@ Assessment 1 ── 1 Risk
 Assessment 1 ── 1 Report
 ```
 
-Os relacionamentos acima estao declarados nos models em `application/app/Models`. As migrations versionadas ainda cobrem apenas `users`, `password_reset_tokens`, `sessions`, `cache` e `cache_locks`; portanto, ha uma lacuna entre o modelo de dominio atual e o schema versionado.
+Os relacionamentos acima estao declarados nos models em `application/app/Models`. As migrations versionadas criam as tabelas das entidades principais em subdiretorios por recurso e sao carregadas pelo `AppServiceProvider`.

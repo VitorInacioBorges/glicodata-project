@@ -7,8 +7,10 @@
 | Tecnologia | Versao | Funcao |
 | --- | --- | --- |
 | **PHP** | `^8.2` no Composer; `8.3.6` observado localmente | Runtime da aplicacao Laravel. |
-| **Laravel Framework** | `^12.0`; `12.37.0` instalado | Framework MVC, roteamento, container, Eloquent, migrations e testes. |
+| **Laravel Framework** | `^12.0`; `12.60.2` instalado | Framework MVC, roteamento, container, Eloquent, migrations e testes. |
 | **Eloquent ORM** | Incluso no Laravel | Models, relacionamentos, casts, fillable e consultas. |
+| **Laravel Socialite** | `^5.27`; `5.27.0` instalado | Cliente OAuth/OpenID usado no login Keycloak da UBS. |
+| **SocialiteProviders Keycloak** | `^5.3`; `5.3.0` instalado | Provider Keycloak para Socialite. |
 | **PostgreSQL** | Default em `.env.example` e `config/database.php` | Banco padrao do projeto conforme PDS-UEPG. |
 | **SQLite** | Configurado em `phpunit.xml` | Banco em memoria para testes automatizados locais. |
 | **Laravel Tinker** | `^2.10.1` | REPL para inspecao e operacoes locais. |
@@ -32,7 +34,7 @@
 | **Composer** | `2.7.1` observado localmente | Gerenciamento de dependencias PHP. |
 | **Node.js** | `24.14.0` observado localmente | Runtime para Vite e ferramentas JS. |
 | **npm** | `11.9.0` observado localmente | Gerenciamento de dependencias JS. |
-| **PHPUnit** | `^11.5.3`; `11.5.43` instalado | Testes unitarios e feature tests. |
+| **PHPUnit** | `^11.5.3`; `11.5.55` instalado | Testes unitarios e feature tests. |
 | **Laravel Pint** | `^1.24`; `1.25.1` instalado | Formatacao de codigo PHP. |
 | **Laravel Sail** | `^1.41`; `1.47.0` instalado | Ambiente Docker opcional para Laravel. |
 | **Laravel Pail** | `^1.2.2`; `1.2.3` instalado | Inspecao de logs no script de desenvolvimento. |
@@ -47,6 +49,7 @@
 O backend esta dividido em quatro camadas principais:
 
 - **Controllers**: entrada HTTP e serializacao JSON.
+- **Policies**: autorizacao por UBS autenticada via guard `keycloak`.
 - **Services**: validacoes, regras de aplicacao e orquestracao.
 - **Repositories**: consultas Eloquent e criacao de registros.
 - **Models**: mapeamento de tabelas, casts, fillable e relacionamentos.
@@ -65,7 +68,7 @@ docs(models): documenta hard delete nos models
 
 ### CRUD REST por Recurso
 
-Os recursos principais usam `Route::apiResource`, produzindo endpoints index, store, show, update e destroy para cada modulo. A rota adicional `delete-self` repete a operacao de delecao usando `id` explicito.
+Os recursos principais usam `Route::apiResource`, produzindo endpoints index, store, show, update e destroy para cada modulo. A rota adicional `delete-self` repete a operacao de delecao usando `id` explicito. Exceto login/callback da UBS, essas rotas ficam protegidas por `auth:keycloak`.
 
 ---
 
@@ -76,7 +79,7 @@ Os recursos principais usam `Route::apiResource`, produzindo endpoints index, st
 | Aspecto | Implementacao |
 | --- | --- |
 | **ORM** | Eloquent Models em `application/app/Models`. |
-| **IDs nos models** | Models usam `HasUuids`, embora a migration versionada de `users` ainda use `$table->id()`. |
+| **IDs nos models** | Models usam `HasUuids` e migrations das entidades usam colunas UUID. |
 | **Paginacao** | Services normalizam `per_page` para o intervalo de 1 a 20. |
 | **Casts** | `boolean`, `integer`, `date`, `array`, `float` e enums nativos PHP. |
 | **Migrations** | Carregadas pelo Laravel a partir de `database/migrations` e subdiretorios. |
@@ -91,7 +94,8 @@ As views atuais sao renderizadas no servidor com Blade. Nao existe estado global
 | Aspecto | Implementacao |
 | --- | --- |
 | **Formato da API** | JSON para controllers REST. |
+| **Autenticacao** | `Authorization: Bearer <token>` validado contra Keycloak pelo guard `keycloak`. |
 | **Paginacao** | Query string `?per_page=N`, com limite maximo efetivo de 20. |
 | **Validacao de ID** | UUID validado por `ValidateUtils::validateId()` nas buscas, updates e deletes por ID. |
 | **Validacao de email** | `ValidateUtils::validateEmail()` usada em buscas por email nos services de UBS e usuarios. |
-| **Autenticacao** | Nao ha middleware de autenticacao aplicado nas rotas atuais. |
+| **Autorizacao** | Policies restringem dados por UBS autenticada e bloqueiam escrita em distritos. |

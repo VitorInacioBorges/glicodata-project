@@ -7,6 +7,7 @@
 Cada classe tende a ter uma responsabilidade principal:
 
 - **Controllers**: recebem requisicoes e retornam JSON.
+- **Policies**: autorizam acesso conforme a UBS autenticada.
 - **Services**: validam IDs, emails, paginacao e coordenam create/update/delete.
 - **Repositories**: encapsulam consultas Eloquent.
 - **Models**: declaram tabela, fillable, casts e relacionamentos.
@@ -47,8 +48,8 @@ O container do Laravel injeta controllers, services, repositories e models. A de
 | --- | --- |
 | **Validacao de entrada** | Criar Form Requests por recurso para substituir `$request->all()` nos controllers. |
 | **Formato de erro** | Padronizar respostas JSON de validacao, nao encontrado e conflito. |
-| **Autenticacao** | Aplicar middleware de autenticacao quando os endpoints deixarem de ser publicos. |
-| **Autorizacao** | Adicionar Policies para separar permissao de usuarios comuns e administradores. |
+| **Autenticacao** | Manter Keycloak como fonte principal e documentar configuracao de realm/client por ambiente. |
+| **Autorizacao** | Evoluir policies para papeis mais granulares quando houver perfis alem da UBS autenticada. |
 | **Transacoes** | Usar `DB::transaction()` quando uma operacao gravar multiplas tabelas. |
 
 ---
@@ -67,6 +68,7 @@ O container do Laravel injeta controllers, services, repositories e models. A de
 ```bash
 application/tests/
 ├── Feature/
+│   ├── ApiValidationTest.php
 │   └── ExampleTest.php
 ├── Unit/
 │   └── ExampleTest.php
@@ -78,7 +80,7 @@ application/tests/
 O checkout atual possui testes de exemplo:
 
 - `GET /` deve retornar status 200.
-- `GET /api/users` deve retornar status 200 quando o banco de teste esta migrado.
+- Validacoes basicas de email invalido em rotas de usuarios existem no checkout, mas precisam ser revisadas para o novo guard `keycloak`.
 - Um teste unitario simples garante que `true` e verdadeiro.
 
 Para cobrir a API real, priorize:
@@ -95,11 +97,11 @@ Para cobrir a API real, priorize:
 
 ### Autenticacao
 
-`UserModel` estende `Authenticatable` e possui cast `password => hashed`, mas o codigo atual nao implementa login real, tokens, guards ou middleware de autenticacao nas rotas da API. A rota web `POST /login` apenas executa `dd($data)` dos dados recebidos pelo formulario.
+`UbsModel` estende `Authenticatable`, oculta `password` e possui cast `password => hashed`. A autenticacao principal da API usa Keycloak/OpenID via Laravel Socialite e guard `keycloak`. O login local por usuario/senha deixou de ser a fonte principal.
 
 ### Autorizacao
 
-O enum `UserRole` define `admin` e `user`, mas ainda nao ha Policies, Gates ou verificacao de role nos controllers. O papel do usuario esta modelado, mas nao esta aplicado como controle de acesso.
+Policies por entidade sao registradas em `AppServiceProvider` e chamadas pelos controllers via `Gate::authorize()`. Elas restringem listagens e acoes ao escopo da UBS autenticada, com distritos em modo somente leitura.
 
 ### Validacao e Sanitizacao
 
@@ -108,7 +110,8 @@ O enum `UserRole` define `admin` e `user`, mas ainda nao ha Policies, Gates ou v
 | **UUID** | `ValidateUtils::validateId()` usa `Str::isUuid()`. |
 | **Email** | `ValidateUtils::validateEmail()` usa validator Laravel com regra `email:rfc` e `max:255`. |
 | **Mass assignment** | Models usam `fillable`, reduzindo exposicao de campos nao permitidos. |
-| **Senha** | `UserModel` oculta `password` e aplica cast `hashed`. |
+| **Senha** | `UserModel` e `UbsModel` ocultam `password` e aplicam cast `hashed`. |
+| **Token Bearer** | `KeycloakUbsAuthService` consulta o endpoint `userinfo` do Keycloak para resolver a UBS ativa. |
 | **CSRF** | Formulario Blade usa `@csrf`. |
 
 ### Variaveis de Ambiente
@@ -119,6 +122,8 @@ O enum `UserRole` define `admin` e `user`, mas ainda nao ha Policies, Gates ou v
 APP_ENV=local
 APP_DEBUG=true
 DB_CONNECTION=pgsql
+KEYCLOAK_BASE_URL=
+KEYCLOAK_REALM=
 SESSION_DRIVER=database
 QUEUE_CONNECTION=database
 CACHE_STORE=database
@@ -146,19 +151,16 @@ Em producao:
 
 | Risco | Impacto |
 | --- | --- |
-| Migrations incompletas para os models atuais | `php artisan migrate` nao cria todas as tabelas esperadas pela API. |
-| Divergencia entre `UserModel` e migration de `users` | Criacao/consulta de usuarios pode falhar dependendo do banco migrado. |
 | Ausencia de Form Requests | Campos invalidos podem chegar aos models ate serem rejeitados pelo banco ou casts. |
-| Endpoints sem auth | Qualquer cliente com acesso ao servidor pode chamar CRUDs. |
+| Dependencia de Keycloak mal configurado | Tokens nao serao validados e rotas protegidas retornarao 401. |
 | Hard delete padrao | Exclusoes removem registros sem lixeira logica. |
 
 ---
 
 ## Boas Praticas Recomendadas para Proximas Alteracoes
 
-1. Criar migrations para `districts`, `ubs`, `patients`, `assessments`, `risks` e `reports`.
-2. Alinhar a migration de `users` ao `UserModel` ou ajustar o model ao schema real.
-3. Introduzir Form Requests para `store` e `update` de cada recurso.
-4. Adicionar API Resources para controlar o formato de resposta.
-5. Implementar autenticacao antes de expor CRUDs fora do ambiente local.
-6. Cobrir services e controllers com testes de feature.
+1. Introduzir Form Requests para `store` e `update` de cada recurso.
+2. Adicionar API Resources para controlar o formato de resposta.
+3. Definir papeis e regras adicionais quando houver mais perfis alem da UBS.
+4. Cobrir services, policies e controllers com testes de feature.
+5. Avaliar cache ou introspection de token se o endpoint `userinfo` se tornar gargalo.

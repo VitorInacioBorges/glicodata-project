@@ -17,7 +17,7 @@ Versions observed while generating this documentation:
 | --- | --- |
 | PHP | `8.3.6` |
 | Composer | `2.7.1` |
-| Laravel | `12.37.0` |
+| Laravel | `12.60.2` |
 | Node.js | `24.14.0` |
 | npm | `11.9.0` |
 
@@ -42,6 +42,12 @@ For new systems in the NTI/UEPG context, PostgreSQL is the project default datab
 | `openssl` | Cryptography, keys, and secure operations. |
 | `fileinfo` | File validation and handling. |
 
+### External Authentication Service
+
+| Service | Reason |
+| --- | --- |
+| **Keycloak/OpenID Connect** | Required to authenticate UBS accounts and validate Bearer tokens used by the API. |
+
 ---
 
 ## Project Dependencies
@@ -50,7 +56,9 @@ For new systems in the NTI/UEPG context, PostgreSQL is the project default datab
 
 | Package | Installed version | Category |
 | --- | --- | --- |
-| `laravel/framework` | `v12.37.0` | Main framework |
+| `laravel/framework` | `v12.60.2` | Main framework |
+| `laravel/socialite` | `v5.27.0` | OAuth/OpenID client for external login. |
+| `socialiteproviders/keycloak` | `5.3.0` | Keycloak provider for Laravel Socialite. |
 | `laravel/tinker` | `v2.10.1` | REPL |
 | `fakerphp/faker` | `v1.24.1` | Fake data for tests/factories |
 | `laravel/pail` | `v1.2.3` | Development logs |
@@ -58,7 +66,7 @@ For new systems in the NTI/UEPG context, PostgreSQL is the project default datab
 | `laravel/sail` | `v1.47.0` | Optional Docker |
 | `mockery/mockery` | `1.6.12` | Test doubles |
 | `nunomaduro/collision` | `v8.8.2` | CLI error handling |
-| `phpunit/phpunit` | `11.5.43` | Tests |
+| `phpunit/phpunit` | `11.5.55` | Tests |
 
 ### JavaScript — Direct Dependencies
 
@@ -114,7 +122,8 @@ Before running the application:
 3. Copy `.env.example` to `.env`.
 4. Generate `APP_KEY`.
 5. Configure PostgreSQL credentials.
-6. Run migrations.
+6. Configure `KEYCLOAK_CLIENT_ID`, `KEYCLOAK_CLIENT_SECRET`, `KEYCLOAK_REDIRECT_URI`, `KEYCLOAK_BASE_URL`, and `KEYCLOAK_REALM`.
+7. Run migrations.
 
 For automated tests, `phpunit.xml` already defines in-memory SQLite:
 

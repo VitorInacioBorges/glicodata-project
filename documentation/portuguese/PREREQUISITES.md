@@ -17,7 +17,7 @@ Versoes observadas durante a geracao desta documentacao:
 | --- | --- |
 | PHP | `8.3.6` |
 | Composer | `2.7.1` |
-| Laravel | `12.37.0` |
+| Laravel | `12.60.2` |
 | Node.js | `24.14.0` |
 | npm | `11.9.0` |
 
@@ -42,6 +42,12 @@ Para novos sistemas no contexto NTI/UEPG, PostgreSQL e o banco padrao do projeto
 | `openssl` | Criptografia, chaves e operacoes seguras. |
 | `fileinfo` | Validacao e manipulacao de arquivos. |
 
+### Servico Externo de Autenticacao
+
+| Servico | Motivo |
+| --- | --- |
+| **Keycloak/OpenID Connect** | Necessario para autenticar contas de UBS e validar tokens Bearer usados pela API. |
+
 ---
 
 ## Dependencias do Projeto
@@ -50,7 +56,9 @@ Para novos sistemas no contexto NTI/UEPG, PostgreSQL e o banco padrao do projeto
 
 | Pacote | Versao instalada | Categoria |
 | --- | --- | --- |
-| `laravel/framework` | `v12.37.0` | Framework principal |
+| `laravel/framework` | `v12.60.2` | Framework principal |
+| `laravel/socialite` | `v5.27.0` | OAuth/OpenID client para login externo. |
+| `socialiteproviders/keycloak` | `5.3.0` | Provider Keycloak para Laravel Socialite. |
 | `laravel/tinker` | `v2.10.1` | REPL |
 | `fakerphp/faker` | `v1.24.1` | Dados falsos para testes/factories |
 | `laravel/pail` | `v1.2.3` | Logs em desenvolvimento |
@@ -58,7 +66,7 @@ Para novos sistemas no contexto NTI/UEPG, PostgreSQL e o banco padrao do projeto
 | `laravel/sail` | `v1.47.0` | Docker opcional |
 | `mockery/mockery` | `1.6.12` | Test doubles |
 | `nunomaduro/collision` | `v8.8.2` | Erros CLI |
-| `phpunit/phpunit` | `11.5.43` | Testes |
+| `phpunit/phpunit` | `11.5.55` | Testes |
 
 ### JavaScript — Dependencias Diretas
 
@@ -114,7 +122,8 @@ Antes de executar a aplicacao:
 3. Copie `.env.example` para `.env`.
 4. Gere `APP_KEY`.
 5. Configure as credenciais PostgreSQL.
-6. Rode migrations.
+6. Configure `KEYCLOAK_CLIENT_ID`, `KEYCLOAK_CLIENT_SECRET`, `KEYCLOAK_REDIRECT_URI`, `KEYCLOAK_BASE_URL` e `KEYCLOAK_REALM`.
+7. Rode migrations.
 
 Para testes automatizados, `phpunit.xml` ja define SQLite em memoria:
 

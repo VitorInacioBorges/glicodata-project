@@ -44,6 +44,18 @@ Crie o banco antes de rodar migrations:
 createdb ubs_system
 ```
 
+#### Keycloak / OpenID
+
+Configure o provider de autenticacao da UBS:
+
+```env
+KEYCLOAK_CLIENT_ID=seu_client_id
+KEYCLOAK_CLIENT_SECRET=seu_client_secret
+KEYCLOAK_REDIRECT_URI="${APP_URL}/api/auth/ubs/callback"
+KEYCLOAK_BASE_URL=https://keycloak.example
+KEYCLOAK_REALM=seu_realm
+```
+
 ### 4. Executar Migrations
 
 ```bash
@@ -58,7 +70,7 @@ Observacao: SQLite segue configurado em `phpunit.xml` apenas para testes automat
 php artisan db:seed
 ```
 
-O seeder atual cria um usuario de teste com `test@example.com`.
+O seeder atual cria distrito, UBS de teste com `keycloak_id = ubs-teste-keycloak-id` e um usuario operacional com `test@example.com`.
 
 ### 6. Iniciar em Modo de Desenvolvimento
 
@@ -143,6 +155,10 @@ Todos os endpoints abaixo usam prefixo `/api`.
 
 | Metodo | Rota | Controller |
 | --- | --- | --- |
+| `GET` | `/auth/ubs/login` | `UbsAuthController@redirect` |
+| `GET` | `/auth/ubs/callback` | `UbsAuthController@callback` |
+| `GET` | `/auth/ubs/me` | `UbsAuthController@me` |
+| `GET` | `/auth/ubs/logout` | `UbsAuthController@logout` |
 | `GET` | `/districts` | `DistrictController@index` |
 | `POST` | `/districts` | `DistrictController@store` |
 | `GET` | `/districts/{id}` | `DistrictController@show` |
@@ -159,6 +175,12 @@ O mesmo padrao se repete para:
 - `/api/risks`
 - `/api/reports`
 
+Todas as rotas acima, exceto `/api/auth/ubs/login` e `/api/auth/ubs/callback`, exigem:
+
+```http
+Authorization: Bearer <token_keycloak>
+```
+
 Rotas web ficam fora do prefixo `/api`:
 
 | Metodo | Rota | Descricao |
@@ -166,7 +188,7 @@ Rotas web ficam fora do prefixo `/api`:
 | `GET` | `/` | Renderiza home. |
 | `GET` | `/contact` | Renderiza pagina de contato. |
 | `GET` | `/register/{id?}` | Renderiza formulario de registro. |
-| `POST` | `/login` | Recebe formulario e executa `dd($data)`. |
+| `POST` | `/login` | Redireciona para o login Keycloak da UBS. |
 
 ---
 
@@ -214,7 +236,7 @@ ou:
 composer test
 ```
 
-Resultado observado durante esta documentacao:
+Resultado historico observado durante documentacao anterior:
 
 ```text
 Tests: 1 risky, 1 passed (2 assertions)
@@ -228,10 +250,10 @@ O teste risky e `Tests\Feature\ExampleTest::test_the_application_returns_a_succe
 php artisan route:list
 ```
 
-Resultado observado durante esta documentacao:
+Resultado observado apos a reorganizacao de auth e pastas:
 
 ```text
-Showing [47] routes
+Showing [53] routes
 ```
 
 ### Validar Versao do Framework
@@ -243,7 +265,7 @@ php artisan --version
 Resultado observado:
 
 ```text
-Laravel Framework 12.37.0
+Laravel Framework 12.60.2
 ```
 
 ---

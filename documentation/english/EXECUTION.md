@@ -44,6 +44,18 @@ Create the database before running migrations:
 createdb ubs_system
 ```
 
+#### Keycloak / OpenID
+
+Configure the UBS authentication provider:
+
+```env
+KEYCLOAK_CLIENT_ID=your_client_id
+KEYCLOAK_CLIENT_SECRET=your_client_secret
+KEYCLOAK_REDIRECT_URI="${APP_URL}/api/auth/ubs/callback"
+KEYCLOAK_BASE_URL=https://keycloak.example
+KEYCLOAK_REALM=your_realm
+```
+
 ### 4. Run Migrations
 
 ```bash
@@ -58,7 +70,7 @@ Observation: SQLite remains configured in `phpunit.xml` only for in-memory autom
 php artisan db:seed
 ```
 
-The current seeder creates a test user with `test@example.com`.
+The current seeder creates a district, a test UBS with `keycloak_id = ubs-teste-keycloak-id`, and an operational user with `test@example.com`.
 
 ### 6. Start in Development Mode
 
@@ -143,6 +155,10 @@ All endpoints below use the `/api` prefix.
 
 | Method | Route | Controller |
 | --- | --- | --- |
+| `GET` | `/auth/ubs/login` | `UbsAuthController@redirect` |
+| `GET` | `/auth/ubs/callback` | `UbsAuthController@callback` |
+| `GET` | `/auth/ubs/me` | `UbsAuthController@me` |
+| `GET` | `/auth/ubs/logout` | `UbsAuthController@logout` |
 | `GET` | `/districts` | `DistrictController@index` |
 | `POST` | `/districts` | `DistrictController@store` |
 | `GET` | `/districts/{id}` | `DistrictController@show` |
@@ -159,6 +175,12 @@ The same pattern repeats for:
 - `/api/risks`
 - `/api/reports`
 
+Every route above except `/api/auth/ubs/login` and `/api/auth/ubs/callback` requires:
+
+```http
+Authorization: Bearer <keycloak_token>
+```
+
 Web routes stay outside the `/api` prefix:
 
 | Method | Route | Description |
@@ -166,7 +188,7 @@ Web routes stay outside the `/api` prefix:
 | `GET` | `/` | Renders the home page. |
 | `GET` | `/contact` | Renders the contact page. |
 | `GET` | `/register/{id?}` | Renders the registration form. |
-| `POST` | `/login` | Receives the form and runs `dd($data)`. |
+| `POST` | `/login` | Redirects to the UBS Keycloak login. |
 
 ---
 
@@ -214,7 +236,7 @@ or:
 composer test
 ```
 
-Observed result during this documentation work:
+Historical result observed during earlier documentation work:
 
 ```text
 Tests: 1 risky, 1 passed (2 assertions)
@@ -228,10 +250,10 @@ The risky test is `Tests\Feature\ExampleTest::test_the_application_returns_a_suc
 php artisan route:list
 ```
 
-Observed result during this documentation work:
+Observed result after the auth and folder reorganization:
 
 ```text
-Showing [47] routes
+Showing [53] routes
 ```
 
 ### Validate Framework Version
@@ -243,7 +265,7 @@ php artisan --version
 Observed result:
 
 ```text
-Laravel Framework 12.37.0
+Laravel Framework 12.60.2
 ```
 
 ---

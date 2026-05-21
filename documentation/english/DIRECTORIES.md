@@ -10,6 +10,7 @@ ubs-system/
 │   │   ├── Http/
 │   │   │   └── Controllers/
 │   │   ├── Models/
+│   │   ├── Policies/
 │   │   ├── Providers/
 │   │   ├── Repositories/
 │   │   ├── Services/
@@ -53,47 +54,63 @@ Directories ignored by `.gitignore`, such as `application/vendor/`, `application
 
 ### `application/app/Http/Controllers/`
 
-HTTP controllers for the API. They receive `Illuminate\Http\Request`, extract `per_page` when needed, delegate to services, and return `JsonResponse`.
+HTTP controllers for the API. They receive `Illuminate\Http\Request`, apply authorization through `Gate`, extract `per_page` when needed, delegate to services, and return `JsonResponse`.
 
-| File | Base routes |
+| Path | Base routes |
 | --- | --- |
-| `DistrictController.php` | `/api/districts` |
-| `UbsController.php` | `/api/ubs` |
-| `UserController.php` | `/api/users` |
-| `PatientController.php` | `/api/patients` |
-| `AssessmentController.php` | `/api/assessments` |
-| `RiskController.php` | `/api/risks` |
-| `ReportController.php` | `/api/reports` |
+| `DistrictControllers/DistrictController.php` | `/api/districts` |
+| `UbsControllers/UbsController.php` | `/api/ubs` |
+| `UbsControllers/UbsAuthController.php` | `/api/auth/ubs/*` |
+| `UserControllers/UserController.php` | `/api/users` |
+| `PatientControllers/PatientController.php` | `/api/patients` |
+| `AssessmentControllers/AssessmentController.php` | `/api/assessments` |
+| `RiskControllers/RiskController.php` | `/api/risks` |
+| `ReportControllers/ReportController.php` | `/api/reports` |
 
 Each controller exposes the standard `Route::apiResource` CRUD actions plus an additional `DELETE /api/{resource}/{id}/delete-self` route.
 
 ### `application/app/Services/`
 
-Application layer. Services centralize UUID validation, email validation where email lookup exists, pagination normalization, and update/delete orchestration.
+Application layer. Services are separated by entity folder and centralize UUID validation, email validation where email lookup exists, pagination normalization, and update/delete orchestration.
 
-| File | Responsibility |
+| Path | Responsibility |
 | --- | --- |
-| `DistrictService.php` | District CRUD and pagination limited between 1 and 20 items. |
-| `UbsService.php` | UBS CRUD and email lookup. |
-| `UserService.php` | User CRUD and email lookup. |
-| `PatientService.php` | Patient CRUD. |
-| `AssessmentService.php` | Assessment CRUD. |
-| `RiskService.php` | Risk CRUD. |
-| `ReportService.php` | Report CRUD. |
+| `DistrictServices/DistrictService.php` | District CRUD and pagination limited between 1 and 20 items. |
+| `UbsServices/UbsService.php` | UBS CRUD, email lookup, and `keycloak_id` lookup. |
+| `UbsServices/KeycloakUbsAuthService.php` | Resolves the authenticated UBS from the Bearer token or the Socialite user returned by Keycloak. |
+| `UserServices/UserService.php` | User CRUD and email lookup. |
+| `PatientServices/PatientService.php` | Patient CRUD. |
+| `AssessmentServices/AssessmentService.php` | Assessment CRUD. |
+| `RiskServices/RiskService.php` | Risk CRUD. |
+| `ReportServices/ReportService.php` | Report CRUD. |
 
 ### `application/app/Repositories/`
 
-Data access layer. Repositories use `newQuery()` on Eloquent models and encapsulate queries reused by services.
+Data access layer. Repositories are separated by entity folder, use `newQuery()` on Eloquent models, and encapsulate queries reused by services.
 
-| File | Defined operations |
+| Path | Defined operations |
 | --- | --- |
-| `DistrictRepository.php` | `paginateDistricts`, `findDistrictById`, `createDistrict` |
-| `UbsRepository.php` | `paginateUbs`, `findUbsById`, `findUbsByEmail`, `createUbs` |
-| `UserRepository.php` | `paginateUsers`, `findUserById`, `findUserByEmail`, `createUser` |
-| `PatientRepository.php` | `paginatePatients`, `findPatientById`, `createPatient` |
-| `AssessmentRepository.php` | `paginateAssessments`, `findAssessmentById`, `createAssessment` |
-| `RiskRepository.php` | `paginateRisks`, `findRiskById`, `createRisk` |
-| `ReportRepository.php` | `paginateReports`, `findReportById`, `createReport` |
+| `DistrictRepositories/DistrictRepository.php` | `paginateDistricts`, `findDistrictById`, `createDistrict` |
+| `UbsRepositories/UbsRepository.php` | `paginateUbs`, `paginateAuthenticatedUbs`, `findUbsById`, `findUbsByEmail`, `findUbsByKeycloakId`, `createUbs` |
+| `UserRepositories/UserRepository.php` | `paginateUsers`, `paginateUsersForUbs`, `findUserById`, `findUserByEmail`, `createUser` |
+| `PatientRepositories/PatientRepository.php` | `paginatePatients`, `paginatePatientsForUbs`, `findPatientById`, `createPatient` |
+| `AssessmentRepositories/AssessmentRepository.php` | `paginateAssessments`, `paginateAssessmentsForUbs`, `findAssessmentById`, `createAssessment` |
+| `RiskRepositories/RiskRepository.php` | `paginateRisks`, `paginateRisksForUbs`, `findRiskById`, `createRisk` |
+| `ReportRepositories/ReportRepository.php` | `paginateReports`, `paginateReportsForUbs`, `findReportById`, `createReport` |
+
+### `application/app/Policies/`
+
+Entity policies registered in `AppServiceProvider`. They authorize the UBS authenticated by the `keycloak` guard to access only data linked to its own UBS, except districts, which are read-only.
+
+| Path | Responsibility |
+| --- | --- |
+| `DistrictPolicies/DistrictPolicy.php` | Allows listing/lookup for active UBS accounts and blocks writes. |
+| `UbsPolicies/UbsPolicy.php` | Allows read, update, and delete only for the authenticated UBS itself. |
+| `UserPolicies/UserPolicy.php` | Restricts users to the authenticated UBS `ubs_id`. |
+| `PatientPolicies/PatientPolicy.php` | Restricts patients to the authenticated UBS `ubs_id`. |
+| `AssessmentPolicies/AssessmentPolicy.php` | Restricts assessments to the authenticated UBS `ubs_id`. |
+| `RiskPolicies/RiskPolicy.php` | Restricts risks through the assessment linked to the authenticated UBS. |
+| `ReportPolicies/ReportPolicy.php` | Restricts reports through the assessment linked to the authenticated UBS. |
 
 ### `application/app/Models/`
 
@@ -102,7 +119,7 @@ Eloquent models with `fillable`, casts, explicit table names, and relationships.
 | File | Table | Main relationships |
 | --- | --- | --- |
 | `DistrictModel.php` | `districts` | `hasMany(UbsModel)` |
-| `UbsModel.php` | `ubs` | `belongsTo(DistrictModel)`, `hasMany(UserModel)`, `hasMany(PatientModel)`, `hasMany(AssessmentModel)` |
+| `UbsModel.php` | `ubs` | `belongsTo(DistrictModel)`, `hasMany(UserModel)`, `hasMany(PatientModel)`, `hasMany(AssessmentModel)`; also acts as the authenticatable UBS entity. |
 | `UserModel.php` | `users` | `belongsTo(UbsModel)`, `hasMany(AssessmentModel)` |
 | `PatientModel.php` | `patients` | `belongsTo(UbsModel)`, `hasMany(AssessmentModel)` |
 | `AssessmentModel.php` | `assessments` | `belongsTo(PatientModel)`, `belongsTo(UserModel)`, `belongsTo(UbsModel)`, `hasOne(RiskModel)`, `hasOne(ReportModel)` |
@@ -128,7 +145,7 @@ Native PHP enums used as model casts.
 
 | File | Responsibility |
 | --- | --- |
-| `AppServiceProvider.php` | Loads migrations from the main directory and subdirectories inside `database/migrations`. |
+| `AppServiceProvider.php` | Registers Socialite Keycloak, the `keycloak` guard, policies, and migration loading from subdirectories. |
 | `RouteServiceProvider.php` | Loads `routes/web.php` with `web` middleware and `routes/api.php` with `api` middleware and `/api` prefix. |
 
 ---
@@ -144,14 +161,18 @@ Blade interface routes without the `/api` prefix.
 | `GET /` | Web view | Renders `home.blade.php`. |
 | `GET /contact` | Web view | Renders `contact.blade.php`. |
 | `GET /register/{id?}` | Web view | Renders the registration form. |
-| `POST /login` | Web action | Receives the form and currently runs `dd($data)`. |
+| `POST /login` | Web action | Redirects to the `ubs.auth.login` route, delegating login to Keycloak. |
 
 ### `application/routes/api.php`
 
-JSON routes loaded with the `/api` prefix.
+JSON routes loaded with the `/api` prefix. Only `GET /api/auth/ubs/login` and `GET /api/auth/ubs/callback` are open; every other API route uses `auth:keycloak`.
 
 | Route | Type | Responsibility |
 | --- | --- | --- |
+| `GET /api/auth/ubs/login` | Auth | Redirects to Keycloak login. |
+| `GET /api/auth/ubs/callback` | Auth | Receives the Keycloak callback and returns token/active UBS data. |
+| `GET /api/auth/ubs/me` | Auth | Returns the UBS authenticated by the Bearer token. |
+| `GET /api/auth/ubs/logout` | Auth | Returns the Keycloak logout URL. |
 | `apiResource` | REST JSON | CRUD for `districts`, `ubs`, `users`, `patients`, `assessments`, `risks`, `reports`. |
 | `DELETE /api/{resource}/{id}/delete-self` | REST JSON | Alternative deletion route for each resource. |
 
@@ -165,6 +186,7 @@ JSON routes loaded with the `/api` prefix.
 | --- | --- |
 | `district-migrations/2026_01_23_143000_create_districts_table.php` | `districts` |
 | `ubs-migrations/2026_01_23_143100_create_ubs_table.php` | `ubs` |
+| `ubs-migrations/2026_05_21_000000_add_auth_fields_to_ubs_table.php` | Adjusts existing databases with `ubs.password`, `ubs.keycloak_id`, and nullable `users.password`. |
 | `user-migrations/2026_01_23_143151_create_users_table.php` | `users` |
 | `patient-migrations/2026_01_23_143200_create_patients_table.php` | `patients` |
 | `assessment-migrations/2026_01_23_143300_create_assessments_table.php` | `assessments` |
@@ -180,7 +202,7 @@ Entity migrations use UUIDs and are separated by entity folder.
 
 | File | Responsibility |
 | --- | --- |
-| `DatabaseSeeder.php` | Creates a test user with `name = Test User` and `email = test@example.com`. |
+| `DatabaseSeeder.php` | Creates a district, a UBS with `keycloak_id`, and an operational test user. |
 
 ### `application/database/factories/`
 
@@ -220,5 +242,6 @@ Vite entry files configured in `vite.config.js`: `resources/css/app.css` and `re
 | Path | Responsibility |
 | --- | --- |
 | `tests/Feature/ExampleTest.php` | Tests that `GET /` returns HTTP 200. |
+| `tests/Feature/ApiValidationTest.php` | Covers basic API validations; needs review for the `keycloak` guard. |
 | `tests/Unit/ExampleTest.php` | Basic `assertTrue(true)` unit test. |
 | `phpunit.xml` | Configures Unit and Feature suites with in-memory SQLite for tests. |

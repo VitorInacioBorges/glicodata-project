@@ -6,7 +6,7 @@
 
 | Elemento | Convencao atual | Exemplo |
 | --- | --- | --- |
-| **Namespaces** | PSR-4 sob `App\` | `App\Services\UserService` |
+| **Namespaces** | PSR-4 sob `App\`, com subpastas por entidade nas camadas principais | `App\Services\UserServices\UserService` |
 | **Classes** | `PascalCase` | `UserService`, `PatientRepository` |
 | **Controllers** | Recurso singular + `Controller` | `RiskController` |
 | **Services** | Recurso singular + `Service` | `AssessmentService` |
@@ -36,6 +36,7 @@
 | Sufixo / Padrao | Tipo | Camada |
 | --- | --- | --- |
 | `*Controller.php` | Controller HTTP | Entrada |
+| `*Policy.php` | Policy Laravel | Autorizacao |
 | `*Service.php` | Service de aplicacao | Regras e orquestracao |
 | `*Repository.php` | Repository Eloquent | Persistencia |
 | `*Model.php` | Model Eloquent | Dados e relacionamentos |
@@ -72,8 +73,12 @@ public function getUserById(string $id): UserModel
 Repositories encapsulam consultas Eloquent e criacao de registros. O padrao atual usa classes concretas, sem interfaces:
 
 ```text
-UserService -> UserRepository -> UserModel
+UserServices/UserService -> UserRepositories/UserRepository -> UserModel
 ```
+
+### Policy / Gate
+
+Controllers usam `Gate::authorize()` antes de responder ou alterar recursos. As policies ficam em subpastas por entidade, como `app/Policies/UserPolicies/UserPolicy.php`, e recebem a UBS autenticada como usuario do guard `keycloak`.
 
 ### Trait de Validacao Compartilhada
 
@@ -95,26 +100,27 @@ Os models concentram fillable, casts e relacionamentos. Essa e a abordagem nativ
 
 ## Organizacao por Recurso
 
-Cada recurso principal possui arquivos paralelos nas camadas:
+Cada recurso principal possui arquivos paralelos nas camadas, separados por pasta de entidade:
 
 ```text
-app/Http/Controllers/UserController.php
-app/Services/UserService.php
-app/Repositories/UserRepository.php
+app/Http/Controllers/UserControllers/UserController.php
+app/Services/UserServices/UserService.php
+app/Repositories/UserRepositories/UserRepository.php
+app/Policies/UserPolicies/UserPolicy.php
 app/Models/UserModel.php
 ```
 
 O mesmo padrao existe para:
 
-| Recurso | Controller | Service | Repository | Model |
-| --- | --- | --- | --- | --- |
-| Distrito | `DistrictController` | `DistrictService` | `DistrictRepository` | `DistrictModel` |
-| UBS | `UbsController` | `UbsService` | `UbsRepository` | `UbsModel` |
-| Usuario | `UserController` | `UserService` | `UserRepository` | `UserModel` |
-| Paciente | `PatientController` | `PatientService` | `PatientRepository` | `PatientModel` |
-| Avaliacao | `AssessmentController` | `AssessmentService` | `AssessmentRepository` | `AssessmentModel` |
-| Risco | `RiskController` | `RiskService` | `RiskRepository` | `RiskModel` |
-| Relatorio | `ReportController` | `ReportService` | `ReportRepository` | `ReportModel` |
+| Recurso | Controller | Service | Repository | Policy | Model |
+| --- | --- | --- | --- | --- | --- |
+| Distrito | `DistrictControllers/DistrictController` | `DistrictServices/DistrictService` | `DistrictRepositories/DistrictRepository` | `DistrictPolicies/DistrictPolicy` | `DistrictModel` |
+| UBS | `UbsControllers/UbsController` | `UbsServices/UbsService` | `UbsRepositories/UbsRepository` | `UbsPolicies/UbsPolicy` | `UbsModel` |
+| Usuario | `UserControllers/UserController` | `UserServices/UserService` | `UserRepositories/UserRepository` | `UserPolicies/UserPolicy` | `UserModel` |
+| Paciente | `PatientControllers/PatientController` | `PatientServices/PatientService` | `PatientRepositories/PatientRepository` | `PatientPolicies/PatientPolicy` | `PatientModel` |
+| Avaliacao | `AssessmentControllers/AssessmentController` | `AssessmentServices/AssessmentService` | `AssessmentRepositories/AssessmentRepository` | `AssessmentPolicies/AssessmentPolicy` | `AssessmentModel` |
+| Risco | `RiskControllers/RiskController` | `RiskServices/RiskService` | `RiskRepositories/RiskRepository` | `RiskPolicies/RiskPolicy` | `RiskModel` |
+| Relatorio | `ReportControllers/ReportController` | `ReportServices/ReportService` | `ReportRepositories/ReportRepository` | `ReportPolicies/ReportPolicy` | `ReportModel` |
 
 ---
 
@@ -124,16 +130,15 @@ O mesmo padrao existe para:
 | --- | --- |
 | **Paginacao** | Controllers leem `per_page`; services limitam entre 1 e 20. |
 | **Delecao** | Models comentam uso de hard delete; nao ha SoftDeletes nos models atuais. |
-| **Rotas** | Todos os arquivos em `routes/` recebem prefixo `/api`. |
+| **Rotas** | `routes/api.php` recebe prefixo `/api`; `routes/web.php` permanece sem prefixo API. |
 | **Respostas** | Controllers retornam JSON para API; `store` usa status 201 e delete usa 204. |
 | **Validacao HTTP** | Ainda nao ha Form Requests; controllers repassam `$request->all()`. |
-| **Autorizacao** | Ainda nao ha Policies, Gates ou middleware de auth nas rotas atuais. |
+| **Autenticacao** | API usa guard `keycloak`; login/callback de UBS sao as unicas rotas abertas. |
+| **Autorizacao** | Controllers usam `Gate::authorize()` com policies por entidade. |
 
 ---
 
 ## Inconsistencias Conhecidas
 
-- `UserModel` usa `HasUuids`, mas a migration versionada de `users` usa `$table->id()`.
-- `UserModel` espera campos como `ubs_id`, `cpf`, `address`, `phone`, `password` e `role`; a migration atual de `users` define outro conjunto de colunas, incluindo `hashPassword`, `weight`, `risk` e `hasRisk`.
-- Os models de `districts`, `ubs`, `patients`, `assessments`, `risks` e `reports` nao possuem migrations versionadas correspondentes no checkout atual.
 - O layout referencia `/css/register.styles.css` em `register.blade.php`, mas esse arquivo esta em `resources/css/register.styles.css`; em `public/css` existe apenas `styles.css` no checkout versionado.
+- Ainda nao ha Form Requests; controllers seguem repassando `$request->all()` para services.

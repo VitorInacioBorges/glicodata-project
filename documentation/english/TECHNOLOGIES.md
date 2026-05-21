@@ -7,8 +7,10 @@
 | Technology | Version | Function |
 | --- | --- | --- |
 | **PHP** | `^8.2` in Composer; `8.3.6` observed locally | Laravel application runtime. |
-| **Laravel Framework** | `^12.0`; `12.37.0` installed | MVC framework, routing, container, Eloquent, migrations, and tests. |
+| **Laravel Framework** | `^12.0`; `12.60.2` installed | MVC framework, routing, container, Eloquent, migrations, and tests. |
 | **Eloquent ORM** | Included in Laravel | Models, relationships, casts, fillable fields, and queries. |
+| **Laravel Socialite** | `^5.27`; `5.27.0` installed | OAuth/OpenID client used by the UBS Keycloak login. |
+| **SocialiteProviders Keycloak** | `^5.3`; `5.3.0` installed | Keycloak provider for Socialite. |
 | **PostgreSQL** | Default in `.env.example` and `config/database.php` | Project default database following PDS-UEPG. |
 | **SQLite** | Configured in `phpunit.xml` | In-memory database for local automated tests. |
 | **Laravel Tinker** | `^2.10.1` | REPL for local inspection and operations. |
@@ -32,7 +34,7 @@
 | **Composer** | `2.7.1` observed locally | PHP dependency management. |
 | **Node.js** | `24.14.0` observed locally | Runtime for Vite and JS tooling. |
 | **npm** | `11.9.0` observed locally | JS dependency management. |
-| **PHPUnit** | `^11.5.3`; `11.5.43` installed | Unit and feature tests. |
+| **PHPUnit** | `^11.5.3`; `11.5.55` installed | Unit and feature tests. |
 | **Laravel Pint** | `^1.24`; `1.25.1` installed | PHP code formatting. |
 | **Laravel Sail** | `^1.41`; `1.47.0` installed | Optional Docker environment for Laravel. |
 | **Laravel Pail** | `^1.2.2`; `1.2.3` installed | Log inspection in the development script. |
@@ -47,6 +49,7 @@
 The backend is split into four main layers:
 
 - **Controllers**: HTTP entry point and JSON serialization.
+- **Policies**: authorization by UBS authenticated through the `keycloak` guard.
 - **Services**: validation, application rules, and orchestration.
 - **Repositories**: Eloquent queries and record creation.
 - **Models**: table mapping, casts, fillable fields, and relationships.
@@ -65,7 +68,7 @@ docs(models): documenta hard delete nos models
 
 ### REST CRUD by Resource
 
-The main resources use `Route::apiResource`, producing index, store, show, update, and destroy endpoints for each module. The additional `delete-self` route repeats deletion using an explicit `id`.
+The main resources use `Route::apiResource`, producing index, store, show, update, and destroy endpoints for each module. The additional `delete-self` route repeats deletion using an explicit `id`. Except for UBS login/callback, these routes are protected by `auth:keycloak`.
 
 ---
 
@@ -76,7 +79,7 @@ The main resources use `Route::apiResource`, producing index, store, show, updat
 | Aspect | Implementation |
 | --- | --- |
 | **ORM** | Eloquent Models in `application/app/Models`. |
-| **Model IDs** | Models use `HasUuids`, although the versioned `users` migration still uses `$table->id()`. |
+| **Model IDs** | Models use `HasUuids` and entity migrations use UUID columns. |
 | **Pagination** | Services normalize `per_page` into the 1 to 20 range. |
 | **Casts** | `boolean`, `integer`, `date`, `array`, `float`, and native PHP enums. |
 | **Migrations** | Loaded by Laravel from `database/migrations` and subdirectories. |
@@ -91,7 +94,8 @@ The current views are rendered server-side with Blade. There is no global fronte
 | Aspect | Implementation |
 | --- | --- |
 | **API format** | JSON for REST controllers. |
+| **Authentication** | `Authorization: Bearer <token>` validated against Keycloak by the `keycloak` guard. |
 | **Pagination** | `?per_page=N` query string, with an effective maximum of 20. |
 | **ID validation** | UUID validation through `ValidateUtils::validateId()` for lookups, updates, and deletes by ID. |
 | **Email validation** | `ValidateUtils::validateEmail()` used by email lookup in UBS and user services. |
-| **Authentication** | No authentication middleware is applied to the current routes. |
+| **Authorization** | Policies restrict data by authenticated UBS and block district writes. |

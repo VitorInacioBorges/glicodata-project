@@ -14,8 +14,9 @@ Use a documentacao principal na raiz do repositorio:
 | --- | --- |
 | Framework | Laravel 12 |
 | Runtime | PHP 8.2+ |
-| Camadas | Controllers, Services, Repositories e Eloquent Models |
+| Camadas | Controllers, Policies, Services, Repositories e Eloquent Models |
 | Rotas | `routes/web.php` para Blade e `routes/api.php` carregado com prefixo `/api` |
+| Autenticacao | Guard `keycloak` com UBS autenticada via Laravel Socialite e SocialiteProviders Keycloak |
 | Views | Blade em `resources/views` |
 | Assets | Vite, Tailwind CSS, Axios e Bootstrap CDN |
 | Testes | PHPUnit via `php artisan test` |

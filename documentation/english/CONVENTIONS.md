@@ -6,7 +6,7 @@
 
 | Element | Current convention | Example |
 | --- | --- | --- |
-| **Namespaces** | PSR-4 under `App\` | `App\Services\UserService` |
+| **Namespaces** | PSR-4 under `App\`, with entity subfolders in main layers | `App\Services\UserServices\UserService` |
 | **Classes** | `PascalCase` | `UserService`, `PatientRepository` |
 | **Controllers** | Singular resource + `Controller` | `RiskController` |
 | **Services** | Singular resource + `Service` | `AssessmentService` |
@@ -36,6 +36,7 @@
 | Suffix / Pattern | Type | Layer |
 | --- | --- | --- |
 | `*Controller.php` | HTTP Controller | Entry point |
+| `*Policy.php` | Laravel policy | Authorization |
 | `*Service.php` | Application service | Rules and orchestration |
 | `*Repository.php` | Eloquent repository | Persistence |
 | `*Model.php` | Eloquent model | Data and relationships |
@@ -72,8 +73,12 @@ public function getUserById(string $id): UserModel
 Repositories encapsulate Eloquent queries and record creation. The current pattern uses concrete classes, without interfaces:
 
 ```text
-UserService -> UserRepository -> UserModel
+UserServices/UserService -> UserRepositories/UserRepository -> UserModel
 ```
+
+### Policy / Gate
+
+Controllers use `Gate::authorize()` before returning or changing resources. Policies live in entity subfolders, such as `app/Policies/UserPolicies/UserPolicy.php`, and receive the authenticated UBS as the user from the `keycloak` guard.
 
 ### Shared Validation Trait
 
@@ -95,26 +100,27 @@ Models centralize fillable fields, casts, and relationships. This is the native 
 
 ## Resource-Based Organization
 
-Each main resource has parallel files across layers:
+Each main resource has parallel files across layers, separated by entity folder:
 
 ```text
-app/Http/Controllers/UserController.php
-app/Services/UserService.php
-app/Repositories/UserRepository.php
+app/Http/Controllers/UserControllers/UserController.php
+app/Services/UserServices/UserService.php
+app/Repositories/UserRepositories/UserRepository.php
+app/Policies/UserPolicies/UserPolicy.php
 app/Models/UserModel.php
 ```
 
 The same pattern exists for:
 
-| Resource | Controller | Service | Repository | Model |
-| --- | --- | --- | --- | --- |
-| District | `DistrictController` | `DistrictService` | `DistrictRepository` | `DistrictModel` |
-| UBS | `UbsController` | `UbsService` | `UbsRepository` | `UbsModel` |
-| User | `UserController` | `UserService` | `UserRepository` | `UserModel` |
-| Patient | `PatientController` | `PatientService` | `PatientRepository` | `PatientModel` |
-| Assessment | `AssessmentController` | `AssessmentService` | `AssessmentRepository` | `AssessmentModel` |
-| Risk | `RiskController` | `RiskService` | `RiskRepository` | `RiskModel` |
-| Report | `ReportController` | `ReportService` | `ReportRepository` | `ReportModel` |
+| Resource | Controller | Service | Repository | Policy | Model |
+| --- | --- | --- | --- | --- | --- |
+| District | `DistrictControllers/DistrictController` | `DistrictServices/DistrictService` | `DistrictRepositories/DistrictRepository` | `DistrictPolicies/DistrictPolicy` | `DistrictModel` |
+| UBS | `UbsControllers/UbsController` | `UbsServices/UbsService` | `UbsRepositories/UbsRepository` | `UbsPolicies/UbsPolicy` | `UbsModel` |
+| User | `UserControllers/UserController` | `UserServices/UserService` | `UserRepositories/UserRepository` | `UserPolicies/UserPolicy` | `UserModel` |
+| Patient | `PatientControllers/PatientController` | `PatientServices/PatientService` | `PatientRepositories/PatientRepository` | `PatientPolicies/PatientPolicy` | `PatientModel` |
+| Assessment | `AssessmentControllers/AssessmentController` | `AssessmentServices/AssessmentService` | `AssessmentRepositories/AssessmentRepository` | `AssessmentPolicies/AssessmentPolicy` | `AssessmentModel` |
+| Risk | `RiskControllers/RiskController` | `RiskServices/RiskService` | `RiskRepositories/RiskRepository` | `RiskPolicies/RiskPolicy` | `RiskModel` |
+| Report | `ReportControllers/ReportController` | `ReportServices/ReportService` | `ReportRepositories/ReportRepository` | `ReportPolicies/ReportPolicy` | `ReportModel` |
 
 ---
 
@@ -124,16 +130,15 @@ The same pattern exists for:
 | --- | --- |
 | **Pagination** | Controllers read `per_page`; services limit it between 1 and 20. |
 | **Deletion** | Models comment on hard delete usage; there is no `SoftDeletes` trait in the current models. |
-| **Routes** | Every file under `routes/` receives the `/api` prefix. |
+| **Routes** | `routes/api.php` receives the `/api` prefix; `routes/web.php` stays outside the API prefix. |
 | **Responses** | Controllers return JSON for the API; `store` uses status 201 and delete uses 204. |
 | **HTTP validation** | There are no Form Requests yet; controllers pass `$request->all()`. |
-| **Authorization** | There are no Policies, Gates, or auth middleware in the current routes. |
+| **Authentication** | API uses the `keycloak` guard; UBS login/callback are the only open API routes. |
+| **Authorization** | Controllers use `Gate::authorize()` with entity policies. |
 
 ---
 
 ## Known Inconsistencies
 
-- `UserModel` uses `HasUuids`, but the versioned `users` migration uses `$table->id()`.
-- `UserModel` expects fields such as `ubs_id`, `cpf`, `address`, `phone`, `password`, and `role`; the current `users` migration defines another set of columns, including `hashPassword`, `weight`, `risk`, and `hasRisk`.
-- The models for `districts`, `ubs`, `patients`, `assessments`, `risks`, and `reports` do not have matching versioned migrations in the current checkout.
 - The register view references `/css/register.styles.css`, but the checkout only versions `public/css/styles.css`; `register.styles.css` is present under `resources/css`.
+- There are no Form Requests yet; controllers still pass `$request->all()` to services.
