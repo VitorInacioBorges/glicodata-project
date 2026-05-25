@@ -22,10 +22,10 @@ Oferecer uma base de API e interface web simples para registrar unidades basicas
 | Servico             | Descricao                                                                                                        |
 | ------------------- | ---------------------------------------------------------------------------------------------------------------- |
 | **Backend API**     | API REST em **Laravel 12** e **PHP 8.2+**, organizada por controllers, services, repositories e Eloquent models. |
-| **Autenticacao**    | Integracao com **Laravel Socialite** e **SocialiteProviders Keycloak** para autenticar UBS via OpenID Connect.     |
+| **Autenticacao**    | Integracao com **Laravel Socialite** e **SocialiteProviders Keycloak** para autenticar UBS via OpenID Connect.   |
 | **Interface Blade** | Views server-side simples para home, contato e formulario de registro, com Bootstrap via CDN e assets publicos.  |
 | **Assets**          | Build com **Vite 7**, **Tailwind CSS 4**, `laravel-vite-plugin` e Axios inicializado no bootstrap JS.            |
-| **Banco de Dados**  | PostgreSQL como banco padrao do projeto; SQLite fica restrito a testes automatizados quando configurado.          |
+| **Banco de Dados**  | PostgreSQL como banco padrao do projeto; SQLite fica restrito a testes automatizados quando configurado.         |
 
 ## Documentacao Tecnica
 
@@ -78,13 +78,13 @@ To provide an API and simple web interface foundation for registering basic heal
 
 ## Services
 
-| Service             | Description                                                                                                                 |
-| ------------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| **Backend API**     | REST API built with **Laravel 12** and **PHP 8.2+**, organized by controllers, services, repositories, and Eloquent models. |
+| Service             | Description                                                                                                                  |
+| ------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| **Backend API**     | REST API built with **Laravel 12** and **PHP 8.2+**, organized by controllers, services, repositories, and Eloquent models.  |
 | **Authentication**  | Integration with **Laravel Socialite** and **SocialiteProviders Keycloak** to authenticate UBS accounts with OpenID Connect. |
-| **Blade Interface** | Simple server-side views for home, contact, and registration form, with Bootstrap CDN and public assets.                    |
-| **Assets**          | Build with **Vite 7**, **Tailwind CSS 4**, `laravel-vite-plugin`, and Axios initialized in the JS bootstrap.                |
-| **Database**        | PostgreSQL as the project default database; SQLite is limited to automated tests when configured.                           |
+| **Blade Interface** | Simple server-side views for home, contact, and registration form, with Bootstrap CDN and public assets.                     |
+| **Assets**          | Build with **Vite 7**, **Tailwind CSS 4**, `laravel-vite-plugin`, and Axios initialized in the JS bootstrap.                 |
+| **Database**        | PostgreSQL as the project default database; SQLite is limited to automated tests when configured.                            |
 
 ## Technical Documentation
 
