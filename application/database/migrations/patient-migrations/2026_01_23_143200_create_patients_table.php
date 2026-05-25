@@ -15,15 +15,16 @@ return new class extends Migration
                 ->cascadeOnUpdate()
                 ->restrictOnDelete();
             $table->string('name');
-            $table->unsignedTinyInteger('age');
             $table->boolean('sex');
-            $table->string('cpf', 20)->unique();
+            $table->string('cpf', 14)->unique();
             $table->string('address');
             $table->string('phone', 30);
             $table->date('birth');
-            $table->timestamps();
+            $table->timestampsTz();
+            $table->softDeletesTz();
 
             $table->index('ubs_id');
+            $table->unique(['id', 'ubs_id']);
         });
     }
 

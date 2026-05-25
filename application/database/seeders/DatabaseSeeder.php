@@ -36,7 +36,7 @@ class DatabaseSeeder extends Seeder
             'ubs_id' => $ubs->id,
             'name' => 'Test User',
             'email' => 'test@example.com',
-            'cpf' => '00000000000',
+            'cpf' => '529.982.247-25',
         ]);
     }
 }

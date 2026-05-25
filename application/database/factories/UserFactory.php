@@ -39,9 +39,9 @@ class UserFactory extends Factory
                 ])->id;
             },
             'name' => fake()->name(),
-            'age' => fake()->numberBetween(18, 90),
+            'birth' => fake()->dateTimeBetween('-90 years', '-18 years')->format('Y-m-d'),
             'sex' => fake()->boolean(),
-            'cpf' => fake()->unique()->numerify('###########'),
+            'cpf' => $this->cpf(),
             'address' => fake()->address(),
             'phone' => fake()->numerify('###########'),
             'email' => fake()->unique()->safeEmail(),
@@ -60,5 +60,26 @@ class UserFactory extends Factory
         return $this->state(fn (array $attributes) => [
             'email_verified_at' => null,
         ]);
+    }
+
+    private function cpf(): string
+    {
+        $base = fake()->unique()->numerify('#########');
+        $digits = str_split($base);
+
+        for ($position = 9; $position < 11; $position++) {
+            $sum = 0;
+
+            for ($index = 0; $index < $position; $index++) {
+                $sum += ((int) $digits[$index]) * (($position + 1) - $index);
+            }
+
+            $digits[] = (string) (((10 * $sum) % 11) % 10);
+        }
+
+        return sprintf(
+            '%s%s%s.%s%s%s.%s%s%s-%s%s',
+            ...$digits,
+        );
     }
 }

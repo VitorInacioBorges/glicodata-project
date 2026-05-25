@@ -10,8 +10,8 @@ return new class extends Migration
     {
         Schema::create('districts', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->string('name');
-            $table->timestamps();
+            $table->string('name')->unique();
+            $table->timestampsTz();
         });
     }
 

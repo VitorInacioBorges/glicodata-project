@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -15,20 +16,31 @@ return new class extends Migration
                 ->cascadeOnUpdate()
                 ->restrictOnDelete();
             $table->string('name');
-            $table->unsignedTinyInteger('age');
+            $table->date('birth');
             $table->boolean('sex');
-            $table->string('cpf', 20)->unique();
+            $table->string('cpf', 14)->unique();
             $table->string('address');
             $table->string('phone', 30);
-            $table->string('email')->unique();
-            $table->timestamp('email_verified_at')->nullable();
+            $table->string('email');
+            $table->timestampTz('email_verified_at')->nullable();
             $table->string('password')->nullable();
             $table->enum('role', ['admin', 'user']);
             $table->rememberToken();
-            $table->timestamps();
+            $table->timestampsTz();
+            $table->softDeletesTz();
 
             $table->index('ubs_id');
+            $table->unique(['id', 'ubs_id']);
         });
+
+        if (DB::getDriverName() === 'pgsql') {
+            DB::statement('ALTER TABLE users ADD CONSTRAINT users_email_lowercase_check CHECK (email = LOWER(email))');
+            DB::statement('CREATE UNIQUE INDEX users_email_lower_unique ON users (LOWER(email))');
+        } else {
+            Schema::table('users', function (Blueprint $table): void {
+                $table->unique('email');
+            });
+        }
     }
 
     public function down(): void

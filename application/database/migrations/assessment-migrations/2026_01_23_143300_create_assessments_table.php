@@ -10,25 +10,30 @@ return new class extends Migration
     {
         Schema::create('assessments', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->foreignUuid('patient_id')
-                ->constrained('patients')
-                ->cascadeOnUpdate()
-                ->cascadeOnDelete();
-            $table->foreignUuid('user_id')
-                ->constrained('users')
-                ->cascadeOnUpdate()
-                ->restrictOnDelete();
+            $table->uuid('patient_id');
+            $table->uuid('user_id');
             $table->foreignUuid('ubs_id')
                 ->constrained('ubs')
                 ->cascadeOnUpdate()
                 ->restrictOnDelete();
             $table->text('symptoms');
             $table->jsonb('answers');
-            $table->timestamps();
+            $table->timestampsTz();
+            $table->softDeletesTz();
 
             $table->index('patient_id');
             $table->index('user_id');
             $table->index('ubs_id');
+            $table->foreign(['patient_id', 'ubs_id'])
+                ->references(['id', 'ubs_id'])
+                ->on('patients')
+                ->cascadeOnUpdate()
+                ->restrictOnDelete();
+            $table->foreign(['user_id', 'ubs_id'])
+                ->references(['id', 'ubs_id'])
+                ->on('users')
+                ->cascadeOnUpdate()
+                ->restrictOnDelete();
         });
     }
 
