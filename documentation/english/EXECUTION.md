@@ -160,20 +160,12 @@ All endpoints below use the `/api` prefix.
 | `GET` | `/auth/ubs/me` | `UbsAuthController@me` |
 | `GET` | `/auth/ubs/logout` | `UbsAuthController@logout` |
 | `GET` | `/districts` | `DistrictController@index` |
-| `POST` | `/districts` | `DistrictController@store` |
 | `GET` | `/districts/{id}` | `DistrictController@show` |
-| `PUT/PATCH` | `/districts/{id}` | `DistrictController@update` |
-| `DELETE` | `/districts/{id}` | `DistrictController@destroy` |
-| `DELETE` | `/districts/{id}/delete-self` | `DistrictController@deleteSelf` |
-
-The same pattern repeats for:
-
-- `/api/ubs`
-- `/api/users`
-- `/api/patients`
-- `/api/assessments`
-- `/api/risks`
-- `/api/reports`
+| `GET` | `/ubs` and `/ubs/{id}` | `UbsController@index/show` |
+| `PUT/PATCH` | `/ubs/{id}` | `UbsController@update`, restricted to `audit-admin` |
+| `apiResource` | `/users`, `/patients`, `/assessments`, `/risks`, `/reports` | Operational CRUD with logical delete on destroy |
+| `GET` | `/audit-events` and `/audit-events/{id}` | `AuditEventController@index/show` |
+| `POST` | `/audit-events/{id}/redact` | `AuditEventController@redact`, restricted to `audit-admin` |
 
 Every route above except `/api/auth/ubs/login` and `/api/auth/ubs/callback` requires:
 
@@ -212,37 +204,21 @@ php artisan migrate
 php artisan migrate:rollback
 ```
 
-### Recreate Local Database
+### Create a Fresh Database for This Schema
 
 ```bash
 php artisan migrate:fresh --seed
 ```
 
-Use `migrate:fresh` only in local environments or disposable databases because it drops existing tables.
+Use `migrate:fresh` only in local environments or disposable databases because it drops existing tables. The consolidated entity migrations and initial institutional data migration are designed for a new PostgreSQL database; an existing production database needs a separate transition plan.
 
 ---
 
 ## Tests and Validation
 
-### Run Tests
+### Test Status
 
-```bash
-php artisan test
-```
-
-or:
-
-```bash
-composer test
-```
-
-Historical result observed during earlier documentation work:
-
-```text
-Tests: 1 risky, 1 passed (2 assertions)
-```
-
-The risky test is `Tests\Feature\ExampleTest::test_the_application_returns_a_successful_response`; PHPUnit reported that the test code or tested code did not close its own output buffers. The command finished with exit code 0.
+The existing tests were not modified or executed in this implementation stage. They require a later testing pass for the new Form Request, `birth`, logical deletion, audit, and Keycloak authorization contracts.
 
 ### Validate Routes
 
@@ -250,10 +226,10 @@ The risky test is `Tests\Feature\ExampleTest::test_the_application_returns_a_suc
 php artisan route:list
 ```
 
-Observed result after the auth and folder reorganization:
+Observed result after the Form Request, catalog, and audit route implementation:
 
 ```text
-Showing [53] routes
+Showing [37] routes
 ```
 
 ### Validate Framework Version
@@ -306,5 +282,9 @@ curl -i https://your-domain.example/api
 - Set `APP_DEBUG=false`.
 - Configure `APP_KEY`.
 - Use a persistent PostgreSQL database.
+- Apply this consolidated migration set only to a fresh production database, or prepare reviewed transition migrations for existing data.
+- Provision and restrict the Keycloak client role `audit-admin`.
+- Restrict `audit_events` database and backup access because its snapshots may contain personal data; define retention/redaction procedures with NTI.
+- Review and activate UBS catalog entries containing provisional contact information before allowing login.
 - Ensure write permission for `storage/` and `bootstrap/cache/`.
 - Do not version `.env`, logs, caches, `vendor/`, or `node_modules/`.

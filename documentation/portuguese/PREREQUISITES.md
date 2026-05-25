@@ -123,7 +123,10 @@ Antes de executar a aplicacao:
 4. Gere `APP_KEY`.
 5. Configure as credenciais PostgreSQL.
 6. Configure `KEYCLOAK_CLIENT_ID`, `KEYCLOAK_CLIENT_SECRET`, `KEYCLOAK_REDIRECT_URI`, `KEYCLOAK_BASE_URL` e `KEYCLOAK_REALM`.
-7. Rode migrations.
+7. Configure a client role Keycloak `audit-admin` somente para administradores institucionais autorizados.
+8. Rode migrations em banco PostgreSQL novo ou prepare migrations de transicao revisadas para uma base existente.
+
+As migrations atuais incluem a carga inicial de UBS e distritos de Ponta Grossa. Registros com email ou contato provisório entram inativos e nao autenticam ate regularizacao administrativa.
 
 Para testes automatizados, `phpunit.xml` ja define SQLite em memoria:
 

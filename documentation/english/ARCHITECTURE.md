@@ -6,10 +6,10 @@ The project uses a layered Laravel architecture organized into **Controllers**, 
 
 This choice addresses three core needs of this project:
 
-1. **Resource organization**: districts, UBS units, users, patients, assessments, risks, and reports follow the same controller, service, repository, and model flow.
-2. **Application rule reuse**: UUID validation, email lookup, pagination, and deletion rules live in services instead of being repeated in controllers.
-3. **Gradual evolution**: the codebase still uses raw Requests and Eloquent Models directly, but the current separation allows Form Requests, Resources, and targeted tests to be added without rewriting the API.
-4. **UBS-scoped access control**: the API uses Keycloak/OpenID to authenticate the UBS account and policies to limit access to data linked to the authenticated unit.
+1. **Resource organization**: districts, UBS units, users, patients, assessments, risks, reports, and audit events follow explicit application flows.
+2. **Input boundary**: Laravel Form Requests normalize and validate HTTP payloads before services receive data.
+3. **Application rule reuse**: UUID and email lookup checks, tenant rules, transactions, logical deletion, and audit recording live in services instead of controllers or repositories.
+4. **UBS-scoped access control**: the API uses Keycloak/OpenID to authenticate the UBS account and policies to limit access to unit data; the `audit-admin` client role governs institutional administration and global audit access.
 
 On the web interface side, the architecture uses **Blade templates** with a base layout, simple pages, and public assets. Vite is configured to compile `resources/css/app.css` and `resources/js/app.js`, while some screens use CSS under `public/css`.
 
@@ -29,13 +29,13 @@ On the web interface side, the architecture uses **Blade templates** with a base
 └──────────────────────────────┬──────────────────────────────┘
                                │
 ┌──────────────────────────────▼──────────────────────────────┐
-│                        Controllers                          │
-│  Receive Request, apply Gates, and coordinate JSON responses│
+│                  Form Requests / Controllers               │
+│  Validate payload, apply Gates, and coordinate JSON output │
 └──────────────────────────────┬──────────────────────────────┘
                                │
 ┌──────────────────────────────▼──────────────────────────────┐
 │                          Services                           │
-│  Validate UUID/email, normalize pagination, orchestrate CRUD│
+│  Enforce rules, transact writes, and record audit events   │
 └──────────────────────────────┬──────────────────────────────┘
                                │
 ┌──────────────────────────────▼──────────────────────────────┐
@@ -83,11 +83,11 @@ On the web interface side, the architecture uses **Blade templates** with a base
 1. Client sends POST /api/patients with JSON body and Authorization: Bearer <token>.
 2. The keycloak guard validates the token in Keycloak and resolves the active UBS.
 3. Laravel routes the request to PatientControllers\PatientController@store.
-4. Controller authorizes the operation with PatientPolicy.
-5. Controller passes $request->all() to PatientService::createPatient().
-6. Service delegates to PatientRepository::createPatient().
-7. Repository creates the record through PatientModel::newQuery()->create($data).
-8. Eloquent applies fillable fields and casts from PatientModel.
+4. StorePatientRequest validates and normalizes the payload; the controller uses `$request->validated()`.
+5. Controller injects the authenticated `ubs_id` and authorizes the operation with PatientPolicy.
+6. PatientService executes persistence and the audit event in a database transaction.
+7. PatientRepository creates the record through PatientModel::newQuery()->create($data).
+8. Eloquent applies fillable fields and casts, storing `birth` and deriving `age` in serialization.
 9. Controller returns JSON with HTTP 201.
 ```
 
@@ -110,8 +110,9 @@ On the web interface side, the architecture uses **Blade templates** with a base
 2. UbsAuthController redirects to the Keycloak provider through Socialite.
 3. Keycloak authenticates the institutional UBS account.
 4. Callback GET /api/auth/ubs/callback receives the authenticated user.
-5. KeycloakUbsAuthService finds the active UBS by keycloak_id or email.
-6. API returns access_token, refresh_token, expires_in, and UBS data.
+5. KeycloakUbsAuthService finds an active UBS by `keycloak_id`, or binds a verified official-email record that is not yet linked.
+6. The first binding is audited and the service derives the `audit-admin` client role from the verified token.
+7. API returns access_token, refresh_token, expires_in, and UBS data.
 ```
 
 ### Web: Registration Form
@@ -159,13 +160,14 @@ There are no formal repository interfaces at the moment. The current separation 
 
 | Module       | Responsibility                                                                                                           |
 | ------------ | ------------------------------------------------------------------------------------------------------------------------ |
-| `District`   | District registration and lookup for UBS units.                                                                          |
-| `Ubs`        | UBS unit registration with contact data, neighborhood, address, and active status.                                       |
-| `User`       | System user registration, including `admin` or `user` role, personal data, and UBS linkage.                              |
-| `Patient`    | Patient registration linked to a UBS unit.                                                                               |
-| `Assessment` | Assessment created by a user for a patient in a UBS unit, with symptoms and answers.                                     |
+| `District`   | Read-only institutional district catalog for UBS units.                                                                  |
+| `Ubs`        | Institutional unit contact/activation data administered by the Keycloak `audit-admin` role.                             |
+| `User`       | Soft-deletable operational user registration linked to a UBS; stores birth date and exposes calculated age.             |
+| `Patient`    | Soft-deletable patient registration linked to a UBS; stores birth date and exposes calculated age.                      |
+| `Assessment` | UBS assessment; logical deletion also deletes its associated risk and report in the same transaction.                    |
 | `Risk`       | Risk record associated with an assessment, including percentage, score, and `low`, `moderate`, or `high` classification. |
 | `Report`     | Report associated with an assessment, including title, description, and comment.                                         |
+| `AuditEvent` | Immutable audit trail with before/after `jsonb` snapshots and audited sensitive-payload redaction.                     |
 
 ---
 
@@ -180,6 +182,7 @@ User     1 ── N Assessment
 Patient  1 ── N Assessment
 Assessment 1 ── 1 Risk
 Assessment 1 ── 1 Report
+Ubs      1 ── N AuditEvent
 ```
 
-These relationships are declared in the models under `application/app/Models`. The versioned migrations create the main entity tables in resource subdirectories and are loaded by `AppServiceProvider`.
+These relationships are declared in the models under `application/app/Models`. The consolidated migrations target a fresh PostgreSQL deployment, enforce UBS ownership for assessments, add logical deletion/audit storage, and insert the initial institutional catalog; they are loaded from resource subdirectories by `AppServiceProvider`.

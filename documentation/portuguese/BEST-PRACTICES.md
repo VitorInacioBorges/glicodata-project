@@ -6,9 +6,10 @@
 
 Cada classe tende a ter uma responsabilidade principal:
 
-- **Controllers**: recebem requisicoes e retornam JSON.
+- **Form Requests**: validam e normalizam o contrato HTTP antes da orquestracao.
+- **Controllers**: autorizam a acao, aplicam o escopo autenticado e retornam JSON.
 - **Policies**: autorizam acesso conforme a UBS autenticada.
-- **Services**: validam IDs, emails, paginacao e coordenam create/update/delete.
+- **Services**: validam buscas e invariantes de negocio e coordenam mutacoes/auditoria transacional.
 - **Repositories**: encapsulam consultas Eloquent.
 - **Models**: declaram tabela, fillable, casts e relacionamentos.
 - **Enums**: isolam valores permitidos para roles e classificacao de risco.
@@ -46,11 +47,11 @@ O container do Laravel injeta controllers, services, repositories e models. A de
 
 | Area | Recomendacao |
 | --- | --- |
-| **Validacao de entrada** | Criar Form Requests por recurso para substituir `$request->all()` nos controllers. |
+| **Validacao de entrada** | Form Requests substituem `$request->all()`; manter novas regras HTTP nessa camada. |
 | **Formato de erro** | Padronizar respostas JSON de validacao, nao encontrado e conflito. |
 | **Autenticacao** | Manter Keycloak como fonte principal e documentar configuracao de realm/client por ambiente. |
-| **Autorizacao** | Evoluir policies para papeis mais granulares quando houver perfis alem da UBS autenticada. |
-| **Transacoes** | Usar `DB::transaction()` quando uma operacao gravar multiplas tabelas. |
+| **Autorizacao** | A client role Keycloak `audit-admin` governa cadastro de UBS e redacao/consulta global de auditoria. |
+| **Transacoes** | Services gravam mutacoes e `audit_events` na mesma `DB::transaction()`. |
 
 ---
 
@@ -80,10 +81,10 @@ application/tests/
 O checkout atual possui testes de exemplo:
 
 - `GET /` deve retornar status 200.
-- Validacoes basicas de email invalido em rotas de usuarios existem no checkout, mas precisam ser revisadas para o novo guard `keycloak`.
+- Validacoes basicas de API existem no checkout, mas precisam ser revisadas para Form Requests, `birth`, delete logico, auditoria e o guard `keycloak`.
 - Um teste unitario simples garante que `true` e verdadeiro.
 
-Para cobrir a API real, priorize:
+Os testes existentes ainda nao foram atualizados nesta etapa por decisao de planejamento. Para a fase de testes e homologacao NTI, priorize:
 
 1. Feature tests dos CRUDs por recurso.
 2. Testes de validacao para UUID invalido e email invalido.
@@ -97,18 +98,21 @@ Para cobrir a API real, priorize:
 
 ### Autenticacao
 
-`UbsModel` estende `Authenticatable`, oculta `password` e possui cast `password => hashed`. A autenticacao principal da API usa Keycloak/OpenID via Laravel Socialite e guard `keycloak`. O login local por usuario/senha deixou de ser a fonte principal.
+`UbsModel` estende `Authenticatable`, oculta `password` e possui cast `password => hashed`. A API nao aceita senha em payload de UBS ou usuario: a autenticacao principal usa Keycloak/OpenID via Laravel Socialite e guard `keycloak`. No primeiro acesso de uma UBS ativa sem `keycloak_id`, o identificador e vinculado pelo email institucional e a alteracao e auditada.
 
 ### Autorizacao
 
-Policies por entidade sao registradas em `AppServiceProvider` e chamadas pelos controllers via `Gate::authorize()`. Elas restringem listagens e acoes ao escopo da UBS autenticada, com distritos em modo somente leitura.
+Policies por entidade sao registradas em `AppServiceProvider` e chamadas pelos controllers via `Gate::authorize()`. Dados operacionais permanecem no escopo da UBS autenticada; distritos sao somente leitura; cadastro de UBS e redacao/consulta global de auditorias exigem a client role Keycloak `audit-admin`.
 
 ### Validacao e Sanitizacao
 
 | Aspecto | Implementacao atual |
 | --- | --- |
 | **UUID** | `ValidateUtils::validateId()` usa `Str::isUuid()`. |
-| **Email** | `ValidateUtils::validateEmail()` usa validator Laravel com regra `email:rfc` e `max:255`. |
+| **Payload HTTP** | Form Requests entregam apenas `$request->validated()` aos services. |
+| **Email** | Requests convertem email para lowercase; PostgreSQL aplica check e indice unico por `LOWER(email)`. |
+| **CPF** | Regra `ValidCpf` exige formato `000.000.000-00` e digitos verificadores validos. |
+| **Nascimento** | `User` e `Patient` persistem `birth`; `age` e calculada na serializacao. |
 | **Mass assignment** | Models usam `fillable`, reduzindo exposicao de campos nao permitidos. |
 | **Senha** | `UserModel` e `UbsModel` ocultam `password` e aplicam cast `hashed`. |
 | **Token Bearer** | `KeycloakUbsAuthService` consulta o endpoint `userinfo` do Keycloak para resolver a UBS ativa. |
@@ -146,21 +150,25 @@ Em producao:
 - Enums nativos reduzem valores invalidos para `role` e `classification`.
 - Services fazem validacao de UUID antes de buscar por ID.
 - Paginacao tem limite superior para reduzir respostas grandes.
+- Constraints compostas impedem avaliacoes entre paciente, usuario e UBS de unidades diferentes.
+- `SoftDeletes` preserva historico de usuarios, pacientes, avaliacoes, riscos e relatorios.
+- Mutacoes geram snapshots em `audit_events`; redacao administrativa permanece registrada.
 
 ### Riscos Atuais
 
 | Risco | Impacto |
 | --- | --- |
-| Ausencia de Form Requests | Campos invalidos podem chegar aos models ate serem rejeitados pelo banco ou casts. |
 | Dependencia de Keycloak mal configurado | Tokens nao serao validados e rotas protegidas retornarao 401. |
-| Hard delete padrao | Exclusoes removem registros sem lixeira logica. |
+| Snapshots completos de auditoria em `jsonb` | CPF, endereco e informacao clinica duplicados exigem controle restrito do banco e backups. |
+| Catalogo inicial provisório | UBS com `@seed.local`, telefone/endereco pendente entram inativas ate regularizacao. |
+| Migrations consolidadas para banco novo | Bancos antigos nao devem receber este conjunto sem estrategia especifica de migracao. |
 
 ---
 
 ## Boas Praticas Recomendadas para Proximas Alteracoes
 
-1. Introduzir Form Requests para `store` e `update` de cada recurso.
-2. Adicionar API Resources para controlar o formato de resposta.
-3. Definir papeis e regras adicionais quando houver mais perfis alem da UBS.
-4. Cobrir services, policies e controllers com testes de feature.
-5. Avaliar cache ou introspection de token se o endpoint `userinfo` se tornar gargalo.
+1. Adicionar API Resources para estabilizar o formato JSON, especialmente dados pessoais e auditoria.
+2. Definir retencao/expurgo de `audit_events` e controles de backup com seguranca/infraestrutura do NTI.
+3. Cobrir Form Requests, policies, soft delete, auditoria e carga inicial com testes de feature na etapa reservada.
+4. Executar homologacao e aceite formal antes de publicar dados clinicos em producao, conforme PDS-UEPG.
+5. Avaliar cache ou validacao JWT/JWKS se o endpoint `userinfo` se tornar gargalo.

@@ -48,9 +48,9 @@
 
 O backend esta dividido em quatro camadas principais:
 
-- **Controllers**: entrada HTTP e serializacao JSON.
+- **Controllers / Form Requests**: entrada HTTP, validacao de payload e serializacao JSON.
 - **Policies**: autorizacao por UBS autenticada via guard `keycloak`.
-- **Services**: validacoes, regras de aplicacao e orquestracao.
+- **Services**: regras de aplicacao, transacoes e auditoria de alteracoes.
 - **Repositories**: consultas Eloquent e criacao de registros.
 - **Models**: mapeamento de tabelas, casts, fillable e relacionamentos.
 
@@ -63,12 +63,12 @@ O historico Git mostra uso de Conventional Commits em portugues brasileiro:
 ```text
 feat(services): valida ids e emails nas buscas
 refactor(routes): aplica prefixo api pelo provider
-docs(models): documenta hard delete nos models
+feat(audit): registra eventos das operacoes persistidas
 ```
 
 ### CRUD REST por Recurso
 
-Os recursos principais usam `Route::apiResource`, produzindo endpoints index, store, show, update e destroy para cada modulo. A rota adicional `delete-self` repete a operacao de delecao usando `id` explicito. Exceto login/callback da UBS, essas rotas ficam protegidas por `auth:keycloak`.
+Os recursos operacionais usam `Route::apiResource` com CRUD protegido por `auth:keycloak`. Distritos sao somente leitura e UBS permite consulta e atualizacao por perfil administrativo do Keycloak. A auditoria e acessada por rotas especificas de consulta e redacao, tambem protegidas.
 
 ---
 
@@ -80,9 +80,11 @@ Os recursos principais usam `Route::apiResource`, produzindo endpoints index, st
 | --- | --- |
 | **ORM** | Eloquent Models em `application/app/Models`. |
 | **IDs nos models** | Models usam `HasUuids` e migrations das entidades usam colunas UUID. |
-| **Paginacao** | Services normalizam `per_page` para o intervalo de 1 a 20. |
-| **Casts** | `boolean`, `integer`, `date`, `array`, `float` e enums nativos PHP. |
-| **Migrations** | Carregadas pelo Laravel a partir de `database/migrations` e subdiretorios. |
+| **Paginacao** | `PaginationRequest` aceita `per_page` apenas no intervalo de 1 a 20. |
+| **Casts** | `boolean`, `date`, `array`, `float`, enums nativos PHP e idade calculada a partir de `birth`. |
+| **Exclusao logica** | Usuarios, pacientes, avaliacoes, riscos e relatorios usam `SoftDeletes`. |
+| **Auditoria** | `audit_events` armazena snapshots `jsonb` e registro permanente de redacao. |
+| **Migrations** | Consolidadas para instalacao PostgreSQL nova, incluindo catalogo institucional inicial e filas em banco. |
 | **Banco de teste** | SQLite em memoria configurado em `phpunit.xml`. |
 
 ### Interface Web — Estado
@@ -96,6 +98,7 @@ As views atuais sao renderizadas no servidor com Blade. Nao existe estado global
 | **Formato da API** | JSON para controllers REST. |
 | **Autenticacao** | `Authorization: Bearer <token>` validado contra Keycloak pelo guard `keycloak`. |
 | **Paginacao** | Query string `?per_page=N`, com limite maximo efetivo de 20. |
+| **Validacao de payload** | Form Requests entregam somente `$request->validated()` aos controllers. |
 | **Validacao de ID** | UUID validado por `ValidateUtils::validateId()` nas buscas, updates e deletes por ID. |
 | **Validacao de email** | `ValidateUtils::validateEmail()` usada em buscas por email nos services de UBS e usuarios. |
-| **Autorizacao** | Policies restringem dados por UBS autenticada e bloqueiam escrita em distritos. |
+| **Autorizacao** | Policies restringem dados por UBS; a role de cliente Keycloak `audit-admin` gerencia UBS e auditoria global. |

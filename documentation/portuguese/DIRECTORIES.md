@@ -54,7 +54,7 @@ Diretorios ignorados por `.gitignore`, como `application/vendor/`, `application/
 
 ### `application/app/Http/Controllers/`
 
-Controllers HTTP da API. Eles recebem `Illuminate\Http\Request`, aplicam autorizacao via `Gate`, extraem `per_page` quando necessario, delegam para services e retornam `JsonResponse`.
+Controllers HTTP da API. Eles recebem Form Requests tipados, aplicam autorizacao via `Gate`, delegam somente `$request->validated()` para services e retornam `JsonResponse`.
 
 | Caminho | Rotas base |
 | --- | --- |
@@ -66,23 +66,29 @@ Controllers HTTP da API. Eles recebem `Illuminate\Http\Request`, aplicam autoriz
 | `AssessmentControllers/AssessmentController.php` | `/api/assessments` |
 | `RiskControllers/RiskController.php` | `/api/risks` |
 | `ReportControllers/ReportController.php` | `/api/reports` |
+| `AuditEventControllers/AuditEventController.php` | `/api/audit-events` |
 
-Cada controller expõe o CRUD padrao do `Route::apiResource` e uma rota adicional `DELETE /api/{resource}/{id}/delete-self`.
+`users`, `patients`, `assessments`, `risks` e `reports` expoem CRUD com delete logico. `districts` expõe apenas leitura; `ubs` expõe leitura e update administrativo; auditoria expõe leitura e redacao registrada.
+
+### `application/app/Http/Requests/`
+
+Form Requests por recurso validam payloads de store/update e `PaginationRequest` limita `per_page` entre 1 e 20. `ApiFormRequest` fornece normalizacao comum; email e persistido em lowercase e somente dados validados seguem para os services.
 
 ### `application/app/Services/`
 
-Camada de aplicacao. Os services ficam separados por pasta de entidade e concentram validacao de UUID, validacao de email quando existe busca por email, normalizacao de paginacao e orquestracao de update/delete.
+Camada de aplicacao. Os services ficam separados por pasta de entidade e concentram verificacoes de consulta, invariantes por UBS, transacoes de mutacao, exclusao logica e auditoria.
 
 | Caminho | Responsabilidade |
 | --- | --- |
-| `DistrictServices/DistrictService.php` | CRUD de distritos e paginacao limitada entre 1 e 20 itens. |
-| `UbsServices/UbsService.php` | CRUD de UBS, busca por email e busca por `keycloak_id`. |
-| `UbsServices/KeycloakUbsAuthService.php` | Resolve UBS autenticada a partir do token Bearer ou do usuario Socialite retornado pelo Keycloak. |
-| `UserServices/UserService.php` | CRUD de usuarios e busca por email. |
-| `PatientServices/PatientService.php` | CRUD de pacientes. |
-| `AssessmentServices/AssessmentService.php` | CRUD de avaliacoes. |
-| `RiskServices/RiskService.php` | CRUD de riscos. |
-| `ReportServices/ReportService.php` | CRUD de relatorios. |
+| `DistrictServices/DistrictService.php` | Consultas do catalogo institucional e paginacao limitada. |
+| `UbsServices/UbsService.php` | Consulta e atualizacao auditada de UBS; bloqueia ativacao com dados provisórios. |
+| `UbsServices/KeycloakUbsAuthService.php` | Resolve UBS ativa, vincula `keycloak_id` no primeiro acesso e identifica `audit-admin`. |
+| `UserServices/UserService.php` | CRUD com soft delete, email por busca e auditoria transacional. |
+| `PatientServices/PatientService.php` | CRUD com soft delete e auditoria transacional. |
+| `AssessmentServices/AssessmentService.php` | CRUD, consistencia UBS/paciente/usuario e delete logico transacional do risco/relatorio associado. |
+| `RiskServices/RiskService.php` | CRUD com soft delete e auditoria transacional. |
+| `ReportServices/ReportService.php` | CRUD com soft delete e auditoria transacional. |
+| `AuditEventServices/AuditEventService.php` | Consulta por escopo, registro de snapshots e redacao auditada. |
 
 ### `application/app/Repositories/`
 
@@ -90,13 +96,14 @@ Camada de acesso a dados. Repositories ficam separados por pasta de entidade, us
 
 | Caminho | Operacoes definidas |
 | --- | --- |
-| `DistrictRepositories/DistrictRepository.php` | `paginateDistricts`, `findDistrictById`, `createDistrict` |
-| `UbsRepositories/UbsRepository.php` | `paginateUbs`, `paginateAuthenticatedUbs`, `findUbsById`, `findUbsByEmail`, `findUbsByKeycloakId`, `createUbs` |
+| `DistrictRepositories/DistrictRepository.php` | `paginateDistricts`, `findDistrictById` |
+| `UbsRepositories/UbsRepository.php` | `paginateUbs`, `paginateAuthenticatedUbs`, `findUbsById`, `findUbsByEmail`, `findUbsByKeycloakId` |
 | `UserRepositories/UserRepository.php` | `paginateUsers`, `paginateUsersForUbs`, `findUserById`, `findUserByEmail`, `createUser` |
 | `PatientRepositories/PatientRepository.php` | `paginatePatients`, `paginatePatientsForUbs`, `findPatientById`, `createPatient` |
 | `AssessmentRepositories/AssessmentRepository.php` | `paginateAssessments`, `paginateAssessmentsForUbs`, `findAssessmentById`, `createAssessment` |
 | `RiskRepositories/RiskRepository.php` | `paginateRisks`, `paginateRisksForUbs`, `findRiskById`, `createRisk` |
 | `ReportRepositories/ReportRepository.php` | `paginateReports`, `paginateReportsForUbs`, `findReportById`, `createReport` |
+| `AuditEventRepositories/AuditEventRepository.php` | `paginateAuditEvents`, `paginateAuditEventsForUbs`, `findAuditEventById`, `createAuditEvent` |
 
 ### `application/app/Policies/`
 
@@ -105,12 +112,13 @@ Policies por entidade registradas em `AppServiceProvider`. Elas autorizam a UBS 
 | Caminho | Responsabilidade |
 | --- | --- |
 | `DistrictPolicies/DistrictPolicy.php` | Permite listagem/consulta para UBS ativa e bloqueia escrita. |
-| `UbsPolicies/UbsPolicy.php` | Permite leitura, update e delete apenas da propria UBS autenticada. |
+| `UbsPolicies/UbsPolicy.php` | Permite leitura propria; `audit-admin` le/atualiza cadastros; delete e bloqueado. |
 | `UserPolicies/UserPolicy.php` | Restringe usuarios ao mesmo `ubs_id` da UBS autenticada. |
 | `PatientPolicies/PatientPolicy.php` | Restringe pacientes ao mesmo `ubs_id` da UBS autenticada. |
 | `AssessmentPolicies/AssessmentPolicy.php` | Restringe avaliacoes ao mesmo `ubs_id` da UBS autenticada. |
 | `RiskPolicies/RiskPolicy.php` | Restringe riscos pela avaliacao vinculada a UBS autenticada. |
 | `ReportPolicies/ReportPolicy.php` | Restringe relatorios pela avaliacao vinculada a UBS autenticada. |
+| `AuditEventPolicies/AuditEventPolicy.php` | Restringe consulta ao escopo proprio e redacao/consulta global a `audit-admin`. |
 
 ### `application/app/Models/`
 
@@ -125,6 +133,9 @@ Models Eloquent com `fillable`, casts, tabela explicita e relacionamentos.
 | `AssessmentModel.php` | `assessments` | `belongsTo(PatientModel)`, `belongsTo(UserModel)`, `belongsTo(UbsModel)`, `hasOne(RiskModel)`, `hasOne(ReportModel)` |
 | `RiskModel.php` | `risks` | `belongsTo(AssessmentModel)` |
 | `ReportModel.php` | `reports` | `belongsTo(AssessmentModel)` |
+| `AuditEventModel.php` | `audit_events` | `belongsTo(UbsModel)` para ator e UBS proprietaria |
+
+`UserModel`, `PatientModel`, `AssessmentModel`, `RiskModel` e `ReportModel` usam `SoftDeletes`. Usuarios e pacientes persistem `birth` e expõem `age` calculada.
 
 ### `application/app/Enums/`
 
@@ -139,7 +150,13 @@ Enums nativos do PHP usados como casts nos models.
 
 | Arquivo | Responsabilidade |
 | --- | --- |
-| `ValidateUtils.php` | Trait com validacoes de UUID, email RFC e payloads de create/update por entidade. |
+| `ValidateUtils.php` | Trait com validacoes de UUID e email usadas em buscas dos services. |
+
+### `application/app/Rules/`
+
+| Arquivo | Responsabilidade |
+| --- | --- |
+| `CpfRules/ValidCpf.php` | Valida formato e digitos verificadores do CPF recebido por Form Requests. |
 
 ### `application/app/Providers/`
 
@@ -173,8 +190,11 @@ Rotas JSON carregadas com prefixo `/api`. Apenas `GET /api/auth/ubs/login` e `GE
 | `GET /api/auth/ubs/callback` | Auth | Recebe retorno do Keycloak e retorna token/dados da UBS ativa. |
 | `GET /api/auth/ubs/me` | Auth | Retorna a UBS autenticada pelo Bearer token. |
 | `GET /api/auth/ubs/logout` | Auth | Retorna URL de logout do Keycloak. |
-| `apiResource` | REST JSON | CRUD para `districts`, `ubs`, `users`, `patients`, `assessments`, `risks`, `reports`. |
-| `DELETE /api/{resource}/{id}/delete-self` | REST JSON | Delecao alternativa para cada recurso. |
+| `GET /api/districts*` | REST JSON | Consulta ao catalogo institucional de distritos. |
+| `GET/PUT/PATCH /api/ubs*` | REST JSON | Consulta de UBS e manutencao por `audit-admin`. |
+| `apiResource` | REST JSON | CRUD com delete logico para `users`, `patients`, `assessments`, `risks`, `reports`. |
+| `GET /api/audit-events*` | Auditoria | Consulta propria, ou global para `audit-admin`. |
+| `POST /api/audit-events/{id}/redact` | Auditoria | Redacao de snapshots sensiveis com novo evento permanente. |
 
 ---
 
@@ -186,17 +206,19 @@ Rotas JSON carregadas com prefixo `/api`. Apenas `GET /api/auth/ubs/login` e `GE
 | --- | --- |
 | `district-migrations/2026_01_23_143000_create_districts_table.php` | `districts` |
 | `ubs-migrations/2026_01_23_143100_create_ubs_table.php` | `ubs` |
-| `ubs-migrations/2026_05_21_000000_add_auth_fields_to_ubs_table.php` | Ajusta bancos existentes com `ubs.password`, `ubs.keycloak_id` e `users.password` nullable. |
+| `ubs-migrations/2026_01_23_143150_seed_ponta_grossa_catalog.php` | Carga inicial de 5 distritos e 42 UBS de Ponta Grossa. |
 | `user-migrations/2026_01_23_143151_create_users_table.php` | `users` |
 | `patient-migrations/2026_01_23_143200_create_patients_table.php` | `patients` |
 | `assessment-migrations/2026_01_23_143300_create_assessments_table.php` | `assessments` |
 | `risk-migrations/2026_01_23_143400_create_risks_table.php` | `risks` |
 | `report-migrations/2026_01_23_143500_create_reports_table.php` | `reports` |
+| `audit-event-migrations/2026_01_23_143600_create_audit_events_table.php` | `audit_events` |
 | `2026_01_23_150700_password_reset_tokens.php` | `password_reset_tokens` |
+| `2026_01_23_150800_create_jobs_tables.php` | `jobs`, `job_batches`, `failed_jobs` |
 | `2026_04_27_135537_create_sessions_table.php` | `sessions` |
 | `2026_04_27_145038_create_cache_table.php` | `cache`, `cache_locks` |
 
-As migrations das entidades usam UUID e ficam separadas por pasta de entidade.
+As migrations foram consolidadas para instalacao limpa: usam UUID, timestamps com timezone, constraints PostgreSQL, soft delete operacional e auditoria. UBS com email `@seed.local` ou contato/endereco pendente sao inseridas inativas.
 
 ### `application/database/seeders/`
 
@@ -242,6 +264,6 @@ Arquivos de entrada do Vite configurados em `vite.config.js`: `resources/css/app
 | Caminho | Responsabilidade |
 | --- | --- |
 | `tests/Feature/ExampleTest.php` | Testa se `GET /` retorna status 200. |
-| `tests/Feature/ApiValidationTest.php` | Cobre validacoes basicas de API; precisa ser revisado para o guard `keycloak`. |
+| `tests/Feature/ApiValidationTest.php` | Testes existentes de API; precisam ser atualizados posteriormente para Form Requests, `birth`, delete logico, auditoria e Keycloak. |
 | `tests/Unit/ExampleTest.php` | Teste unitario basico `assertTrue(true)`. |
 | `phpunit.xml` | Configura suite Unit e Feature com SQLite em memoria no ambiente de teste. |

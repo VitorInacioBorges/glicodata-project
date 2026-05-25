@@ -6,9 +6,9 @@
 
 Each class tends to have one main responsibility:
 
-- **Controllers**: receive requests and return JSON.
+- **Form Requests / Controllers**: validate HTTP payloads, authorize operations, and return JSON.
 - **Policies**: authorize access according to the authenticated UBS.
-- **Services**: validate IDs, emails, pagination, and coordinate create/update/delete operations.
+- **Services**: validate lookups, enforce tenant rules, transact writes, perform logical deletion, and record audits.
 - **Repositories**: encapsulate Eloquent queries.
 - **Models**: declare table names, fillable fields, casts, and relationships.
 - **Enums**: isolate allowed values for roles and risk classification.
@@ -46,11 +46,11 @@ Laravel's container injects controllers, services, repositories, and models. Dep
 
 | Area | Recommendation |
 | --- | --- |
-| **Input validation** | Create Form Requests per resource to replace `$request->all()` in controllers. |
+| **Input validation** | Form Requests are implemented; maintain them as the only input boundary for write payloads. |
 | **Error format** | Standardize JSON responses for validation, not found, and conflict errors. |
 | **Authentication** | Keep Keycloak as the primary source and document realm/client configuration per environment. |
-| **Authorization** | Evolve policies into more granular roles when profiles beyond the authenticated UBS exist. |
-| **Transactions** | Use `DB::transaction()` when an operation writes to multiple tables. |
+| **Authorization** | Keep the Keycloak `audit-admin` client role provisioned only for institutional administrators. |
+| **Transactions** | Written operations and their audit events are transactional; preserve this invariant in new workflows. |
 
 ---
 
@@ -80,7 +80,7 @@ application/tests/
 The current checkout contains example tests:
 
 - `GET /` must return HTTP 200.
-- Basic invalid-email validations for user routes exist in the checkout, but need review for the new `keycloak` guard.
+- Existing API validation tests require a later revision for Form Requests, `birth`, logical deletion, audit, and the `keycloak` guard.
 - One basic unit test asserts that `true` is true.
 
 To cover the real API, prioritize:
@@ -109,6 +109,7 @@ Entity policies are registered in `AppServiceProvider` and called by controllers
 | --- | --- |
 | **UUID** | `ValidateUtils::validateId()` uses `Str::isUuid()`. |
 | **Email** | `ValidateUtils::validateEmail()` uses Laravel validator with `email:rfc` and `max:255`. |
+| **HTTP payloads** | Resource Form Requests validate normalized data, formatted CPF, date of birth, and pagination before services run. |
 | **Mass assignment** | Models use `fillable`, reducing exposure of disallowed fields. |
 | **Password** | `UserModel` and `UbsModel` hide `password` and apply the `hashed` cast. |
 | **Bearer token** | `KeycloakUbsAuthService` calls Keycloak's `userinfo` endpoint to resolve the active UBS. |
@@ -151,16 +152,17 @@ In production:
 
 | Risk | Impact |
 | --- | --- |
-| No Form Requests | Invalid fields may reach models until rejected by the database or casts. |
 | Misconfigured Keycloak dependency | Tokens will not be validated and protected routes will return 401. |
-| Default hard delete | Deletions remove records without a logical recycle bin. |
+| Audit snapshots contain personal data | Database access, backups, retention, and redaction procedures must be restricted according to NTI governance. |
+| Consolidated fresh-install migrations | An existing deployed database cannot receive this schema without a dedicated transition migration plan. |
+| Provisional institutional entries | UBS records with temporary email/contact data remain inactive until verified by an administrator. |
 
 ---
 
 ## Recommended Best Practices for Next Changes
 
-1. Introduce Form Requests for each resource `store` and `update`.
-2. Add API Resources to control response shape.
-3. Define additional roles and rules when profiles beyond UBS exist.
-4. Cover services, policies, and controllers with feature tests.
+1. Add API Resources to control response shape and prevent unnecessary personal-data exposure.
+2. Establish NTI-approved audit retention, backup access, and redaction procedures before production data is processed.
+3. Provision and review Keycloak roles per environment, especially `audit-admin`.
+4. Update and expand feature tests in the dedicated testing stage.
 5. Evaluate caching or token introspection if the `userinfo` endpoint becomes a bottleneck.

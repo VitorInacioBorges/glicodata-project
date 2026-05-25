@@ -56,13 +56,17 @@ KEYCLOAK_BASE_URL=https://keycloak.example
 KEYCLOAK_REALM=seu_realm
 ```
 
+Configure no client Keycloak a role `audit-admin` em `resource_access.<KEYCLOAK_CLIENT_ID>.roles` para a conta institucional que podera corrigir/ativar UBS e administrar redacao de auditoria.
+
 ### 4. Executar Migrations
 
 ```bash
 php artisan migrate
 ```
 
-Observacao: SQLite segue configurado em `phpunit.xml` apenas para testes automatizados em memoria.
+As migrations atuais destinam-se a uma instalacao PostgreSQL limpa. Elas criam schema, tabelas de fila/auditoria e carregam o catalogo inicial de Ponta Grossa com 5 distritos e 42 UBS. UBS com dados provisórios (`@seed.local`, `A validar` ou `Não informado`) entram inativas.
+
+Observacao: SQLite segue configurado em `phpunit.xml` apenas para testes automatizados em memoria; os testes precisam ser atualizados na etapa reservada antes de serem executados contra o novo contrato.
 
 ### 5. Executar Seeders
 
@@ -160,20 +164,12 @@ Todos os endpoints abaixo usam prefixo `/api`.
 | `GET` | `/auth/ubs/me` | `UbsAuthController@me` |
 | `GET` | `/auth/ubs/logout` | `UbsAuthController@logout` |
 | `GET` | `/districts` | `DistrictController@index` |
-| `POST` | `/districts` | `DistrictController@store` |
 | `GET` | `/districts/{id}` | `DistrictController@show` |
-| `PUT/PATCH` | `/districts/{id}` | `DistrictController@update` |
-| `DELETE` | `/districts/{id}` | `DistrictController@destroy` |
-| `DELETE` | `/districts/{id}/delete-self` | `DistrictController@deleteSelf` |
-
-O mesmo padrao se repete para:
-
-- `/api/ubs`
-- `/api/users`
-- `/api/patients`
-- `/api/assessments`
-- `/api/risks`
-- `/api/reports`
+| `GET` | `/ubs` e `/ubs/{id}` | Consulta da propria UBS; `audit-admin` lista/consulta todas. |
+| `PUT/PATCH` | `/ubs/{id}` | Atualizacao/ativacao exclusiva de `audit-admin`. |
+| CRUD | `/users`, `/patients`, `/assessments`, `/risks`, `/reports` | Dados no escopo da UBS; `DELETE` e logico e auditado. |
+| `GET` | `/audit-events` e `/audit-events/{id}` | Consulta de auditoria propria ou global para `audit-admin`. |
+| `POST` | `/audit-events/{id}/redact` | Redacao administrativa auditada de snapshots sensiveis. |
 
 Todas as rotas acima, exceto `/api/auth/ubs/login` e `/api/auth/ubs/callback`, exigem:
 
@@ -212,37 +208,21 @@ php artisan migrate
 php artisan migrate:rollback
 ```
 
-### Recriar Banco Local
+### Criar Banco Novo para Este Schema
 
 ```bash
 php artisan migrate:fresh --seed
 ```
 
-Use `migrate:fresh` apenas em ambiente local ou bancos descartaveis, pois ele apaga tabelas existentes.
+Use `migrate:fresh` apenas em ambiente local ou bancos descartaveis, pois ele apaga tabelas existentes. As migrations consolidadas e a carga institucional foram desenhadas para um PostgreSQL novo; banco de producao que ja possui migrations executadas exige plano de transicao separado.
 
 ---
 
 ## Testes e Validacao
 
-### Executar Testes
+### Status de Testes
 
-```bash
-php artisan test
-```
-
-ou:
-
-```bash
-composer test
-```
-
-Resultado historico observado durante documentacao anterior:
-
-```text
-Tests: 1 risky, 1 passed (2 assertions)
-```
-
-O teste risky e `Tests\Feature\ExampleTest::test_the_application_returns_a_successful_response`; o PHPUnit informou que o codigo de teste ou codigo testado nao fechou seus proprios output buffers. O comando terminou com exit code 0.
+Os testes existentes nao foram alterados nem executados nesta etapa. Eles precisam de uma fase posterior para cobrir Form Requests, `birth`, delete logico, auditoria e autorizacao Keycloak.
 
 ### Validar Rotas
 
@@ -250,10 +230,10 @@ O teste risky e `Tests\Feature\ExampleTest::test_the_application_returns_a_succe
 php artisan route:list
 ```
 
-Resultado observado apos a reorganizacao de auth e pastas:
+Resultado observado apos Form Requests, auditoria e restricao do catalogo:
 
 ```text
-Showing [53] routes
+Showing [37] routes
 ```
 
 ### Validar Versao do Framework
@@ -306,5 +286,10 @@ curl -i https://seu-dominio.example/api
 - Definir `APP_DEBUG=false`.
 - Configurar `APP_KEY`.
 - Usar banco persistente PostgreSQL.
+- Publicar somente em banco novo ou preparar migracao especifica para ambiente que ja executou migrations antigas.
+- Provisionar uma UBS ativa e a client role Keycloak `audit-admin` antes da manutencao do catalogo.
+- Restringir acesso e backups de `audit_events`, pois os snapshots `jsonb` podem conter dados pessoais e clinicos.
+- Regularizar e ativar UBS provisórias apenas depois da confirmacao de email, telefone e endereco.
+- Concluir testes de aceitacao/homologacao e avaliacao de seguranca/infraestrutura antes de producao, conforme PDS-UEPG.
 - Garantir permissao de escrita em `storage/` e `bootstrap/cache/`.
 - Nao versionar `.env`, logs, caches, `vendor/` ou `node_modules/`.

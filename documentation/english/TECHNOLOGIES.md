@@ -48,9 +48,9 @@
 
 The backend is split into four main layers:
 
-- **Controllers**: HTTP entry point and JSON serialization.
+- **Controllers / Form Requests**: HTTP entry, payload validation, and JSON serialization.
 - **Policies**: authorization by UBS authenticated through the `keycloak` guard.
-- **Services**: validation, application rules, and orchestration.
+- **Services**: application rules, transactions, and audit recording.
 - **Repositories**: Eloquent queries and record creation.
 - **Models**: table mapping, casts, fillable fields, and relationships.
 
@@ -63,12 +63,12 @@ The Git history shows Conventional Commits in Brazilian Portuguese:
 ```text
 feat(services): valida ids e emails nas buscas
 refactor(routes): aplica prefixo api pelo provider
-docs(models): documenta hard delete nos models
+feat(audit): registra eventos das operacoes persistidas
 ```
 
 ### REST CRUD by Resource
 
-The main resources use `Route::apiResource`, producing index, store, show, update, and destroy endpoints for each module. The additional `delete-self` route repeats deletion using an explicit `id`. Except for UBS login/callback, these routes are protected by `auth:keycloak`.
+Operational resources use `Route::apiResource` CRUD protected by `auth:keycloak`. Districts are read-only, and UBS allows read and administrative update by a Keycloak administrative role. Audit is available through dedicated protected read and redaction routes.
 
 ---
 
@@ -80,9 +80,11 @@ The main resources use `Route::apiResource`, producing index, store, show, updat
 | --- | --- |
 | **ORM** | Eloquent Models in `application/app/Models`. |
 | **Model IDs** | Models use `HasUuids` and entity migrations use UUID columns. |
-| **Pagination** | Services normalize `per_page` into the 1 to 20 range. |
-| **Casts** | `boolean`, `integer`, `date`, `array`, `float`, and native PHP enums. |
-| **Migrations** | Loaded by Laravel from `database/migrations` and subdirectories. |
+| **Pagination** | `PaginationRequest` accepts `per_page` only in the 1 to 20 range. |
+| **Casts** | `boolean`, `date`, `array`, `float`, native PHP enums, and age calculated from `birth`. |
+| **Logical deletion** | Users, patients, assessments, risks, and reports use `SoftDeletes`. |
+| **Audit** | `audit_events` stores `jsonb` snapshots and permanent records of payload redaction. |
+| **Migrations** | Consolidated for a fresh PostgreSQL installation, including the initial institutional catalog and database queues. |
 | **Test database** | In-memory SQLite configured in `phpunit.xml`. |
 
 ### Web Interface — State
@@ -96,6 +98,7 @@ The current views are rendered server-side with Blade. There is no global fronte
 | **API format** | JSON for REST controllers. |
 | **Authentication** | `Authorization: Bearer <token>` validated against Keycloak by the `keycloak` guard. |
 | **Pagination** | `?per_page=N` query string, with an effective maximum of 20. |
+| **Payload validation** | Form Requests expose only `$request->validated()` to controllers. |
 | **ID validation** | UUID validation through `ValidateUtils::validateId()` for lookups, updates, and deletes by ID. |
 | **Email validation** | `ValidateUtils::validateEmail()` used by email lookup in UBS and user services. |
-| **Authorization** | Policies restrict data by authenticated UBS and block district writes. |
+| **Authorization** | Policies scope data by UBS; the Keycloak client role `audit-admin` manages UBS data and global audit access. |

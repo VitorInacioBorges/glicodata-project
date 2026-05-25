@@ -7,9 +7,9 @@ O projeto adota uma arquitetura Laravel em camadas, organizada em **Controllers*
 Essa escolha resolve tres necessidades centrais deste projeto:
 
 1. **Organizacao por recurso**: distritos, UBS, usuarios, pacientes, avaliacoes, riscos e relatorios seguem o mesmo fluxo de controller, service, repository e model.
-2. **Reuso de regras de aplicacao**: validacoes de UUID, busca por email, paginacao e delecao ficam nos services e nao precisam ser repetidas nos controllers.
-3. **Evolucao gradual**: a base ainda usa Request direto e Eloquent Models, mas a separacao atual permite adicionar Form Requests, Resources e testes especificos sem reescrever a API.
-4. **Controle de acesso por UBS**: a API usa Keycloak/OpenID para autenticar a UBS e policies para limitar o acesso aos dados vinculados a unidade autenticada.
+2. **Contrato HTTP explicito**: Form Requests validam entrada, normalizam emails/CPF e limitam paginacao antes dos controllers.
+3. **Persistencia rastreavel**: services executam mutacoes e eventos de auditoria na mesma transacao.
+4. **Controle de acesso por UBS**: a API usa Keycloak/OpenID; a client role `audit-admin` administra cadastro institucional e auditoria global.
 
 Na interface web, a arquitetura usa **Blade templates** com um layout base, paginas simples e assets publicos. O Vite esta configurado para compilar `resources/css/app.css` e `resources/js/app.js`, enquanto algumas telas usam CSS em `public/css`.
 
@@ -30,12 +30,12 @@ Na interface web, a arquitetura usa **Blade templates** com um layout base, pagi
                                │
 ┌──────────────────────────────▼──────────────────────────────┐
 │                        Controllers                          │
-│  Recebem Request, aplicam Gate e coordenam respostas JSON   │
+│  Recebem validated(), aplicam Gate e coordenam JSON         │
 └──────────────────────────────┬──────────────────────────────┘
                                │
 ┌──────────────────────────────▼──────────────────────────────┐
 │                          Services                           │
-│  Validam UUID/email, normalizam paginacao e orquestram CRUD │
+│  Aplicam invariantes e transacoes com auditoria             │
 └──────────────────────────────┬──────────────────────────────┘
                                │
 ┌──────────────────────────────▼──────────────────────────────┐
@@ -84,10 +84,10 @@ Na interface web, a arquitetura usa **Blade templates** com um layout base, pagi
 2. O guard keycloak valida o token no Keycloak e resolve a UBS ativa.
 3. Laravel roteia para PatientControllers\PatientController@store.
 4. Controller autoriza a operacao com PatientPolicy.
-5. Controller repassa $request->all() para PatientService::createPatient().
-6. Service delega para PatientRepository::createPatient().
-7. Repository cria o registro via PatientModel::newQuery()->create($data).
-8. Eloquent aplica fillable e casts do PatientModel.
+5. StorePatientRequest valida CPF formatado, nascimento e demais campos; o controller usa `validated()`.
+6. O controller define `ubs_id` pelo token, sem aceitar escopo arbitrario do payload.
+7. Service cria paciente e `audit_events` dentro da mesma transacao.
+8. Eloquent persiste `birth`; a resposta serializada calcula `age`.
 9. Controller retorna JSON com status 201.
 ```
 
@@ -110,8 +110,10 @@ Na interface web, a arquitetura usa **Blade templates** com um layout base, pagi
 2. UbsAuthController redireciona para o provider Keycloak via Socialite.
 3. Keycloak autentica a conta institucional da UBS.
 4. Callback GET /api/auth/ubs/callback recebe o usuario autenticado.
-5. KeycloakUbsAuthService localiza UBS ativa por keycloak_id ou email.
-6. API retorna access_token, refresh_token, expires_in e dados da UBS.
+5. KeycloakUbsAuthService localiza UBS ativa por `keycloak_id` ou email institucional.
+6. Se ainda nao houver vinculo, grava `keycloak_id` e auditoria na primeira autenticacao.
+7. O token validado pode conceder a client role `audit-admin`.
+8. API retorna access_token, refresh_token, expires_in e dados da UBS.
 ```
 
 ### Web: Formulario de Registro
@@ -159,13 +161,14 @@ Nao ha interfaces formais para repositories neste momento. A separacao atual ain
 
 | Modulo       | Responsabilidade                                                                                            |
 | ------------ | ----------------------------------------------------------------------------------------------------------- |
-| `District`   | Cadastro e consulta de distritos aos quais UBS pertencem.                                                   |
-| `Ubs`        | Cadastro de unidades basicas de saude com dados de contato, bairro, endereco e status ativo.                |
-| `User`       | Cadastro de usuarios do sistema, incluindo role `admin` ou `user`, dados pessoais e vinculo com UBS.        |
-| `Patient`    | Cadastro de pacientes vinculados a uma UBS.                                                                 |
-| `Assessment` | Registro de avaliacao feita por usuario para paciente em uma UBS, com sintomas e respostas.                 |
+| `District`   | Consulta do catalogo institucional fixo de distritos.                                                        |
+| `Ubs`        | Catalogo institucional; alteracao/ativacao somente por `audit-admin`.                                        |
+| `User`       | Profissionais vinculados a UBS, com `birth`, idade derivada e exclusao logica.                               |
+| `Patient`    | Pacientes vinculados a UBS, com `birth`, idade derivada e exclusao logica.                                   |
+| `Assessment` | Avaliacao da UBS; sua exclusao logica tambem remove risco e relatorio associados na mesma transacao.       |
 | `Risk`       | Registro de risco associado a avaliacao, com percentual, score e classificacao `low`, `moderate` ou `high`. |
 | `Report`     | Relatorio associado a uma avaliacao, com titulo, descricao e comentario.                                    |
+| `AuditEvent` | Trilha de alteracoes com snapshots e redacao registrada sob autorizacao administrativa.                     |
 
 ---
 
@@ -180,6 +183,7 @@ User     1 ── N Assessment
 Patient  1 ── N Assessment
 Assessment 1 ── 1 Risk
 Assessment 1 ── 1 Report
+Ubs      1 ── N AuditEvent
 ```
 
-Os relacionamentos acima estao declarados nos models em `application/app/Models`. As migrations versionadas criam as tabelas das entidades principais em subdiretorios por recurso e sao carregadas pelo `AppServiceProvider`.
+Os relacionamentos acima estao declarados nos models em `application/app/Models`. As migrations consolidadas criam o schema PostgreSQL para instalacao limpa, carregam o catalogo inicial de Ponta Grossa e sao carregadas pelo `AppServiceProvider`.

@@ -36,6 +36,7 @@
 | Suffix / Pattern | Type | Layer |
 | --- | --- | --- |
 | `*Controller.php` | HTTP Controller | Entry point |
+| `*Request.php` | Laravel Form Request | HTTP input validation |
 | `*Policy.php` | Laravel policy | Authorization |
 | `*Service.php` | Application service | Rules and orchestration |
 | `*Repository.php` | Eloquent repository | Persistence |
@@ -82,7 +83,11 @@ Controllers use `Gate::authorize()` before returning or changing resources. Poli
 
 ### Shared Validation Trait
 
-`ValidateUtils` centralizes UUID and email validation to avoid repetition across services.
+`ValidateUtils` centralizes identifier and email validation for service lookups. HTTP payload validation belongs to Form Requests; controllers pass only `$request->validated()`.
+
+### Form Requests
+
+`Http/Requests` contains resource requests for writes, pagination, and audit redaction. Server-owned values such as `ubs_id`, `keycloak_id`, and passwords cannot be supplied in API payloads.
 
 ### Active Record / Eloquent Model
 
@@ -90,7 +95,7 @@ Models centralize fillable fields, casts, and relationships. This is the native 
 
 ### Resource Routing
 
-`Route::apiResource()` generates predictable REST routes for index, store, show, update, and destroy. The project applies this pattern to seven resources.
+`Route::apiResource()` generates predictable REST routes. Operational resources (`users`, `patients`, `assessments`, `risks`, and `reports`) expose CRUD; `districts` is read-only and `ubs` allows read and administrative update only. Audit events expose dedicated read and redaction routes.
 
 ### Provider Pattern
 
@@ -121,6 +126,7 @@ The same pattern exists for:
 | Assessment | `AssessmentControllers/AssessmentController` | `AssessmentServices/AssessmentService` | `AssessmentRepositories/AssessmentRepository` | `AssessmentPolicies/AssessmentPolicy` | `AssessmentModel` |
 | Risk | `RiskControllers/RiskController` | `RiskServices/RiskService` | `RiskRepositories/RiskRepository` | `RiskPolicies/RiskPolicy` | `RiskModel` |
 | Report | `ReportControllers/ReportController` | `ReportServices/ReportService` | `ReportRepositories/ReportRepository` | `ReportPolicies/ReportPolicy` | `ReportModel` |
+| Audit | `AuditEventControllers/AuditEventController` | `AuditEventServices/AuditEventService` | `AuditEventRepositories/AuditEventRepository` | `AuditEventPolicies/AuditEventPolicy` | `AuditEventModel` |
 
 ---
 
@@ -128,17 +134,18 @@ The same pattern exists for:
 
 | Area | Convention |
 | --- | --- |
-| **Pagination** | Controllers read `per_page`; services limit it between 1 and 20. |
-| **Deletion** | Models comment on hard delete usage; there is no `SoftDeletes` trait in the current models. |
+| **Pagination** | `PaginationRequest` validates `per_page`; accepted values range from 1 to 20. |
+| **Deletion** | `User`, `Patient`, `Assessment`, `Risk`, and `Report` use `SoftDeletes`; district and UBS deletion are not exposed through the API. |
 | **Routes** | `routes/api.php` receives the `/api` prefix; `routes/web.php` stays outside the API prefix. |
 | **Responses** | Controllers return JSON for the API; `store` uses status 201 and delete uses 204. |
-| **HTTP validation** | There are no Form Requests yet; controllers pass `$request->all()`. |
+| **HTTP validation** | Form Requests normalize and validate input; controllers pass `$request->validated()`. |
 | **Authentication** | API uses the `keycloak` guard; UBS login/callback are the only open API routes. |
-| **Authorization** | Controllers use `Gate::authorize()` with entity policies. |
+| **Authorization** | Controllers use `Gate::authorize()`; the Keycloak `audit-admin` client role manages UBS data and global audit access. |
+| **Audit** | Operational writes and Keycloak linking record `jsonb` snapshots; payload redaction is itself audited. |
 
 ---
 
 ## Known Inconsistencies
 
 - The register view references `/css/register.styles.css`, but the checkout only versions `public/css/styles.css`; `register.styles.css` is present under `resources/css`.
-- There are no Form Requests yet; controllers still pass `$request->all()` to services.
+- Existing tests still require a dedicated update for the `birth`, `SoftDeletes`, Keycloak, and Form Request contracts.
