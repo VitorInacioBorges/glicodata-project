@@ -1,7 +1,7 @@
 <?php
 
-// Representa o model, e a tabela por conseguinte, da tabela UBS (ubs atrelada a um distrito especifico e que possui usuarios e pacientes) 
-// nao deve possuir formas de delecao para esse tipo de dado que nao sejam HARD DELETE
+// Representa a UBS institucional ligada a um distrito, usuarios e pacientes.
+// A API administra ativacao e dados cadastrais; nao expoe delecao normal de UBS.
 
 namespace App\Models;
 
@@ -35,6 +35,7 @@ class UbsModel extends Authenticatable
      */
     protected $hidden = [
         'password',
+        'audit_admin',
     ];
 
     /**
@@ -78,5 +79,25 @@ class UbsModel extends Authenticatable
     public function assessments(): HasMany
     {
         return $this->hasMany(AssessmentModel::class, 'ubs_id');
+    }
+
+    /**
+     * @return HasMany<AuditEventModel, $this>
+     */
+    public function auditEvents(): HasMany
+    {
+        return $this->hasMany(AuditEventModel::class, 'actor_ubs_id');
+    }
+
+    public function setAuditAdmin(bool $isAuditAdmin): self
+    {
+        $this->setAttribute('audit_admin', $isAuditAdmin);
+
+        return $this;
+    }
+
+    public function isAuditAdmin(): bool
+    {
+        return (bool) $this->getAttribute('audit_admin');
     }
 }

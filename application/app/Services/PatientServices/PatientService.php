@@ -4,9 +4,11 @@ namespace App\Services\PatientServices;
 
 use App\Models\PatientModel;
 use App\Repositories\PatientRepositories\PatientRepository;
+use App\Services\AuditEventServices\AuditEventService;
 use App\Utils\ValidateUtils;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Support\Facades\DB;
 
 class PatientService
 {
@@ -14,8 +16,8 @@ class PatientService
 
     public function __construct(
         protected PatientRepository $repository,
-    ) {
-    }
+        protected AuditEventService $auditService,
+    ) {}
 
     public function getAllPatients(int $perPage): LengthAwarePaginator
     {
@@ -36,44 +38,60 @@ class PatientService
         $patient = $this->repository->findPatientById($id);
 
         if ($patient === null) {
-            throw (new ModelNotFoundException())->setModel(PatientModel::class, [$id]);
+            throw (new ModelNotFoundException)->setModel(PatientModel::class, [$id]);
         }
 
         return $patient;
     }
 
     /**
-     * @param array<string, mixed> $data
+     * @param  array<string, mixed>  $data
      */
     public function createPatient(array $data): PatientModel
     {
-        $this->validateCreatePatientData($data);
+        return DB::transaction(function () use ($data): PatientModel {
+            $patient = $this->repository->createPatient($data);
+            $this->auditService->record('create', $patient, (string) $patient->ubs_id, null, $patient->toArray());
 
-        return $this->repository->createPatient($data);
+            return $patient;
+        });
     }
 
     /**
-     * @param array<string, mixed> $data
+     * @param  array<string, mixed>  $data
      */
     public function updatePatient(string $id, array $data): PatientModel
     {
         $patient = $this->getPatientById($id);
-        $this->validateUpdatePatientData($data, $id);
 
-        $patient->fill($data);
-        $patient->save();
+        return DB::transaction(function () use ($patient, $data): PatientModel {
+            $before = $patient->toArray();
+            $patient->fill($data)->save();
+            $patient = $patient->refresh();
 
-        return $patient->refresh();
+            $this->auditService->record('update', $patient, (string) $patient->ubs_id, $before, $patient->toArray());
+
+            return $patient;
+        });
     }
 
     public function deletePatient(string $id): bool
     {
-        return (bool) $this->getPatientById($id)->delete();
+        return $this->deletePatientInstance($this->getPatientById($id));
     }
 
     public function deletePatientInstance(PatientModel $patient): bool
     {
-        return (bool) $patient->delete();
+        return DB::transaction(function () use ($patient): bool {
+            $before = $patient->toArray();
+            $deleted = (bool) $patient->delete();
+
+            if ($deleted) {
+                $this->auditService->record('delete', $patient, (string) $patient->ubs_id, $before, $patient->toArray());
+            }
+
+            return $deleted;
+        });
     }
 
     private function normalizePerPage(int $perPage): int

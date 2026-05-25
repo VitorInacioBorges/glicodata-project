@@ -1,7 +1,7 @@
 <?php
 
-// Representa o model, e a tabela por conseguinte, da tabela DISTRITO (distrito de cada UBS) 
-// nao deve possuir formas de delecao para esse tipo de dado que nao sejam HARD DELETE
+// Representa o distrito institucional associado as UBS.
+// Distritos sao catalogo de leitura na API e nao expoem operacoes de escrita.
 
 namespace App\Models;
 

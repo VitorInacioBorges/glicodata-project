@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Models\AssessmentModel;
+use App\Models\AuditEventModel;
 use App\Models\DistrictModel;
 use App\Models\PatientModel;
 use App\Models\ReportModel;
@@ -10,6 +11,7 @@ use App\Models\RiskModel;
 use App\Models\UbsModel;
 use App\Models\UserModel;
 use App\Policies\AssessmentPolicies\AssessmentPolicy;
+use App\Policies\AuditEventPolicies\AuditEventPolicy;
 use App\Policies\DistrictPolicies\DistrictPolicy;
 use App\Policies\PatientPolicies\PatientPolicy;
 use App\Policies\ReportPolicies\ReportPolicy;
@@ -18,10 +20,10 @@ use App\Policies\UbsPolicies\UbsPolicy;
 use App\Policies\UserPolicies\UserPolicy;
 use App\Services\UbsServices\KeycloakUbsAuthService;
 use Illuminate\Http\Request;
-use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\ServiceProvider;
 use SocialiteProviders\Keycloak\Provider as KeycloakProvider;
 use SocialiteProviders\Manager\SocialiteWasCalled;
 
@@ -50,6 +52,7 @@ class AppServiceProvider extends ServiceProvider
         });
 
         Gate::policy(AssessmentModel::class, AssessmentPolicy::class);
+        Gate::policy(AuditEventModel::class, AuditEventPolicy::class);
         Gate::policy(DistrictModel::class, DistrictPolicy::class);
         Gate::policy(PatientModel::class, PatientPolicy::class);
         Gate::policy(ReportModel::class, ReportPolicy::class);
@@ -60,7 +63,7 @@ class AppServiceProvider extends ServiceProvider
         // Registra que as migrations dentro de ./migrations/* devem ser rodadas
 
         $mainPath = database_path('migrations');
-        $directories = glob($mainPath . '/*', GLOB_ONLYDIR);
+        $directories = glob($mainPath.'/*', GLOB_ONLYDIR);
 
         $this->loadMigrationsFrom(array_merge([$mainPath], $directories));
     }

@@ -3,10 +3,12 @@
 namespace App\Http\Controllers\RiskControllers;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\CommonRequests\PaginationRequest;
+use App\Http\Requests\RiskRequests\StoreRiskRequest;
+use App\Http\Requests\RiskRequests\UpdateRiskRequest;
 use App\Models\RiskModel;
 use App\Services\RiskServices\RiskService;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 
@@ -14,15 +16,14 @@ class RiskController extends Controller
 {
     public function __construct(
         protected RiskService $service,
-    ) {
-    }
+    ) {}
 
-    public function index(Request $request): JsonResponse
+    public function index(PaginationRequest $request): JsonResponse
     {
         Gate::authorize('viewAny', RiskModel::class);
 
         return response()->json($this->service->getRisksForUbs(
-            (int) $request->query('per_page', 20),
+            $request->perPage(),
             (string) Auth::guard('keycloak')->id(),
         ));
     }
@@ -35,29 +36,22 @@ class RiskController extends Controller
         return response()->json($risk);
     }
 
-    public function store(Request $request): JsonResponse
+    public function store(StoreRiskRequest $request): JsonResponse
     {
-        Gate::authorize('create', [RiskModel::class, $request->input('assessment_id')]);
+        $data = $request->validated();
+        Gate::authorize('create', [RiskModel::class, $data['assessment_id']]);
 
-        return response()->json($this->service->createRisk($request->all()), 201);
+        return response()->json($this->service->createRisk($data), 201);
     }
 
-    public function update(Request $request, string $id): JsonResponse
+    public function update(UpdateRiskRequest $request, string $id): JsonResponse
     {
         Gate::authorize('update', $this->service->getRiskById($id));
 
-        return response()->json($this->service->updateRisk($id, $request->all()));
+        return response()->json($this->service->updateRisk($id, $request->validated()));
     }
 
     public function destroy(string $id): JsonResponse
-    {
-        Gate::authorize('delete', $this->service->getRiskById($id));
-        $this->service->deleteRisk($id);
-
-        return response()->json(null, 204);
-    }
-
-    public function deleteSelf(string $id): JsonResponse
     {
         Gate::authorize('delete', $this->service->getRiskById($id));
         $this->service->deleteRisk($id);

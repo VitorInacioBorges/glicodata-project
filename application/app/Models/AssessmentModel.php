@@ -1,6 +1,6 @@
 <?php
 
-// Representa o model, e a tabela por conseguinte, da tabela AVALIAÇÃO (avaliacao de cada medico para um paciente especifico) 
+// Representa o model, e a tabela por conseguinte, da tabela AVALIAÇÃO (avaliacao de cada medico para um paciente especifico)
 
 namespace App\Models;
 
@@ -9,11 +9,12 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class AssessmentModel extends Model
 {
     /** @use HasFactory<\Database\Factories\AssessmentFactory> */
-    use HasFactory, HasUuids;
+    use HasFactory, HasUuids, SoftDeletes;
 
     protected $fillable = [
         'patient_id',
@@ -40,7 +41,7 @@ class AssessmentModel extends Model
      */
     public function patient(): BelongsTo
     {
-        return $this->belongsTo(PatientModel::class, 'patient_id');
+        return $this->belongsTo(PatientModel::class, 'patient_id')->withTrashed();
     }
 
     /**
@@ -48,7 +49,7 @@ class AssessmentModel extends Model
      */
     public function user(): BelongsTo
     {
-        return $this->belongsTo(UserModel::class, 'user_id');
+        return $this->belongsTo(UserModel::class, 'user_id')->withTrashed();
     }
 
     /**

@@ -1,6 +1,6 @@
 <?php
 
-// Representa o model, e a tabela por conseguinte, da tabela RISCO (risco que compõe parte de uma avaliação) 
+// Representa o model, e a tabela por conseguinte, da tabela RISCO (risco que compõe parte de uma avaliação)
 
 namespace App\Models;
 
@@ -9,13 +9,12 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class RiskModel extends Model
 {
     /** @use HasFactory<\Database\Factories\RiskFactory> */
-    use HasFactory, HasUuids;
-
-    public const UPDATED_AT = null;
+    use HasFactory, HasUuids, SoftDeletes;
 
     protected $fillable = [
         'assessment_id',

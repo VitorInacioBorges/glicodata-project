@@ -13,7 +13,8 @@ class UbsPolicy
 
     public function view(UbsModel $authenticatedUbs, UbsModel $ubs): bool
     {
-        return $this->ownsRecord($authenticatedUbs, $ubs->id);
+        return $this->isActive($authenticatedUbs)
+            && ($authenticatedUbs->isAuditAdmin() || hash_equals((string) $authenticatedUbs->id, (string) $ubs->id));
     }
 
     public function create(UbsModel $ubs): bool
@@ -23,17 +24,12 @@ class UbsPolicy
 
     public function update(UbsModel $authenticatedUbs, UbsModel $ubs): bool
     {
-        return $this->ownsRecord($authenticatedUbs, $ubs->id);
+        return $this->isActive($authenticatedUbs) && $authenticatedUbs->isAuditAdmin();
     }
 
     public function delete(UbsModel $authenticatedUbs, UbsModel $ubs): bool
     {
-        return $this->ownsRecord($authenticatedUbs, $ubs->id);
-    }
-
-    private function ownsRecord(UbsModel $ubs, ?string $ubsId): bool
-    {
-        return $this->isActive($ubs) && $ubsId !== null && hash_equals((string) $ubs->id, $ubsId);
+        return false;
     }
 
     private function isActive(UbsModel $ubs): bool

@@ -14,8 +14,7 @@ class DistrictService
 
     public function __construct(
         protected DistrictRepository $repository,
-    ) {
-    }
+    ) {}
 
     public function getAllDistricts(int $perPage): LengthAwarePaginator
     {
@@ -29,44 +28,10 @@ class DistrictService
         $district = $this->repository->findDistrictById($id);
 
         if ($district === null) {
-            throw (new ModelNotFoundException())->setModel(DistrictModel::class, [$id]);
+            throw (new ModelNotFoundException)->setModel(DistrictModel::class, [$id]);
         }
 
         return $district;
-    }
-
-    /**
-     * @param array<string, mixed> $data
-     */
-    public function createDistrict(array $data): DistrictModel
-    {
-        $this->validateCreateDistrictData($data);
-
-        return $this->repository->createDistrict($data);
-    }
-
-    /**
-     * @param array<string, mixed> $data
-     */
-    public function updateDistrict(string $id, array $data): DistrictModel
-    {
-        $district = $this->getDistrictById($id);
-        $this->validateUpdateDistrictData($data);
-
-        $district->fill($data);
-        $district->save();
-
-        return $district->refresh();
-    }
-
-    public function deleteDistrict(string $id): bool
-    {
-        return (bool) $this->getDistrictById($id)->delete();
-    }
-
-    public function deleteDistrictInstance(DistrictModel $district): bool
-    {
-        return (bool) $district->delete();
     }
 
     private function normalizePerPage(int $perPage): int

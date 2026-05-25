@@ -9,8 +9,7 @@ class UbsRepository
 {
     public function __construct(
         protected UbsModel $model,
-    ) {
-    }
+    ) {}
 
     public function paginateUbs(int $perPage): LengthAwarePaginator
     {
@@ -41,13 +40,5 @@ class UbsRepository
         return $this->model->newQuery()
             ->where('keycloak_id', $keycloakId)
             ->first();
-    }
-
-    /**
-     * @param array<string, mixed> $data
-     */
-    public function createUbs(array $data): UbsModel
-    {
-        return $this->model->newQuery()->create($data);
     }
 }

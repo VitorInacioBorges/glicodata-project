@@ -1,6 +1,6 @@
 <?php
 
-// Representa o model, e a tabela por conseguinte, da tabela USUARIO (usuario do sistema, um admin ou usuario normal tratado como medico generalista) 
+// Representa o model, e a tabela por conseguinte, da tabela USUARIO (usuario do sistema, um admin ou usuario normal tratado como medico generalista)
 
 namespace App\Models;
 
@@ -10,13 +10,14 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
 class UserModel extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, HasUuids, Notifiable;
+    use HasFactory, HasUuids, Notifiable, SoftDeletes;
 
     /**
      * The attributes that are mass assignable.
@@ -26,7 +27,7 @@ class UserModel extends Authenticatable
     protected $fillable = [
         'ubs_id',
         'name',
-        'age',
+        'birth',
         'sex',
         'cpf',
         'address',
@@ -37,6 +38,13 @@ class UserModel extends Authenticatable
     ];
 
     protected $table = 'users';
+
+    /**
+     * @var list<string>
+     */
+    protected $appends = [
+        'age',
+    ];
 
     /**
      * The attributes that should be hidden for serialization.
@@ -57,7 +65,7 @@ class UserModel extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
-            'age' => 'integer',
+            'birth' => 'date',
             'sex' => 'boolean',
             'password' => 'hashed',
             'role' => UserRole::class,
@@ -78,5 +86,10 @@ class UserModel extends Authenticatable
     public function assessments(): HasMany
     {
         return $this->hasMany(AssessmentModel::class, 'user_id');
+    }
+
+    public function getAgeAttribute(): ?int
+    {
+        return $this->birth?->age;
     }
 }

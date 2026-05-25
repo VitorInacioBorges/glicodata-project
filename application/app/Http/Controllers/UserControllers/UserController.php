@@ -3,10 +3,12 @@
 namespace App\Http\Controllers\UserControllers;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\CommonRequests\PaginationRequest;
+use App\Http\Requests\UserRequests\StoreUserRequest;
+use App\Http\Requests\UserRequests\UpdateUserRequest;
 use App\Models\UserModel;
 use App\Services\UserServices\UserService;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 
@@ -14,15 +16,14 @@ class UserController extends Controller
 {
     public function __construct(
         protected UserService $service,
-    ) {
-    }
+    ) {}
 
-    public function index(Request $request): JsonResponse
+    public function index(PaginationRequest $request): JsonResponse
     {
         Gate::authorize('viewAny', UserModel::class);
 
         return response()->json($this->service->getUsersForUbs(
-            (int) $request->query('per_page', 20),
+            $request->perPage(),
             (string) Auth::guard('keycloak')->id(),
         ));
     }
@@ -35,29 +36,25 @@ class UserController extends Controller
         return response()->json($user);
     }
 
-    public function store(Request $request): JsonResponse
+    public function store(StoreUserRequest $request): JsonResponse
     {
-        Gate::authorize('create', [UserModel::class, $request->input('ubs_id')]);
+        $ubsId = (string) Auth::guard('keycloak')->id();
+        Gate::authorize('create', [UserModel::class, $ubsId]);
 
-        return response()->json($this->service->createUser($request->all()), 201);
+        return response()->json($this->service->createUser([
+            ...$request->validated(),
+            'ubs_id' => $ubsId,
+        ]), 201);
     }
 
-    public function update(Request $request, string $id): JsonResponse
+    public function update(UpdateUserRequest $request, string $id): JsonResponse
     {
         Gate::authorize('update', $this->service->getUserById($id));
 
-        return response()->json($this->service->updateUser($id, $request->all()));
+        return response()->json($this->service->updateUser($id, $request->validated()));
     }
 
     public function destroy(string $id): JsonResponse
-    {
-        Gate::authorize('delete', $this->service->getUserById($id));
-        $this->service->deleteUser($id);
-
-        return response()->json(null, 204);
-    }
-
-    public function deleteSelf(string $id): JsonResponse
     {
         Gate::authorize('delete', $this->service->getUserById($id));
         $this->service->deleteUser($id);
