@@ -10,7 +10,8 @@ class UpdatePatientRequest extends ApiFormRequest
 {
     protected function prepareForValidation(): void
     {
-        $this->normalizeStrings(['name', 'cpf', 'address', 'phone']);
+        $this->normalizeStrings(['name', 'cpf']);
+        $this->normalizeNullableStrings(['address', 'phone']);
     }
 
     /**
@@ -30,8 +31,8 @@ class UpdatePatientRequest extends ApiFormRequest
                 new ValidCpf,
                 Rule::unique('patients', 'cpf')->ignore((string) $this->route('id')),
             ],
-            'address' => ['sometimes', 'required', 'string', 'max:255'],
-            'phone' => ['sometimes', 'required', 'string', 'max:30'],
+            'address' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'phone' => ['sometimes', 'nullable', 'string', 'max:30'],
         ];
     }
 }

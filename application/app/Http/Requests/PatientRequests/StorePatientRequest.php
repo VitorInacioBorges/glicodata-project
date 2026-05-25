@@ -10,7 +10,8 @@ class StorePatientRequest extends ApiFormRequest
 {
     protected function prepareForValidation(): void
     {
-        $this->normalizeStrings(['name', 'cpf', 'address', 'phone']);
+        $this->normalizeStrings(['name', 'cpf']);
+        $this->normalizeNullableStrings(['address', 'phone']);
     }
 
     /**
@@ -23,8 +24,8 @@ class StorePatientRequest extends ApiFormRequest
             'birth' => ['required', 'date', 'before_or_equal:today'],
             'sex' => ['required', 'boolean'],
             'cpf' => ['required', 'string', 'max:14', new ValidCpf, Rule::unique('patients', 'cpf')],
-            'address' => ['required', 'string', 'max:255'],
-            'phone' => ['required', 'string', 'max:30'],
+            'address' => ['nullable', 'string', 'max:255'],
+            'phone' => ['nullable', 'string', 'max:30'],
         ];
     }
 }

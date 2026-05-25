@@ -1,11 +1,11 @@
 <?php
 
-// Representa o enum da propriedade PAPEL (papel do usuario no sistema) 
+// Representa o papel do perfil vinculado a uma UBS.
 
 namespace App\Enums;
 
 enum UserRole: string
 {
-    case User = 'user';
+    case Professional = 'professional';
     case Admin = 'admin';
 }

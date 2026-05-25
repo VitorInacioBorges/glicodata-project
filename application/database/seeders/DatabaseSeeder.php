@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Enums\UserRole;
 use App\Models\DistrictModel;
 use App\Models\UbsModel;
 use App\Models\UserModel;
@@ -37,6 +38,7 @@ class DatabaseSeeder extends Seeder
             'name' => 'Test User',
             'email' => 'test@example.com',
             'cpf' => '529.982.247-25',
+            'role' => UserRole::Professional->value,
         ]);
     }
 }

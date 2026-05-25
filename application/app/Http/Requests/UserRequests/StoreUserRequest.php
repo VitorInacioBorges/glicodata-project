@@ -12,9 +12,10 @@ class StoreUserRequest extends ApiFormRequest
     protected function prepareForValidation(): void
     {
         $this->normalizeStrings(
-            ['name', 'cpf', 'address', 'phone', 'email'],
+            ['name', 'cpf', 'email'],
             ['email'],
         );
+        $this->normalizeNullableStrings(['address', 'phone']);
     }
 
     /**
@@ -27,8 +28,8 @@ class StoreUserRequest extends ApiFormRequest
             'birth' => ['required', 'date', 'before_or_equal:today'],
             'sex' => ['required', 'boolean'],
             'cpf' => ['required', 'string', 'max:14', new ValidCpf, Rule::unique('users', 'cpf')],
-            'address' => ['required', 'string', 'max:255'],
-            'phone' => ['required', 'string', 'max:30'],
+            'address' => ['nullable', 'string', 'max:255'],
+            'phone' => ['nullable', 'string', 'max:30'],
             'email' => ['required', 'email:rfc', 'max:255', Rule::unique('users', 'email')],
             'role' => ['required', Rule::enum(UserRole::class)],
         ];

@@ -35,4 +35,35 @@ abstract class ApiFormRequest extends FormRequest
 
         $this->merge($normalized);
     }
+
+    /**
+     * @param  array<int, string>  $fields
+     */
+    protected function normalizeNullableStrings(array $fields): void
+    {
+        $normalized = [];
+
+        foreach ($fields as $field) {
+            if (! array_key_exists($field, $this->all())) {
+                continue;
+            }
+
+            $value = $this->input($field);
+
+            if ($value === null) {
+                $normalized[$field] = null;
+
+                continue;
+            }
+
+            if (! is_string($value)) {
+                continue;
+            }
+
+            $value = trim($value);
+            $normalized[$field] = $value === '' ? null : $value;
+        }
+
+        $this->merge($normalized);
+    }
 }

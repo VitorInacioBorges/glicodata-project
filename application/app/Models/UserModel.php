@@ -1,6 +1,6 @@
 <?php
 
-// Representa o model, e a tabela por conseguinte, da tabela USUARIO (usuario do sistema, um admin ou usuario normal tratado como medico generalista)
+// Representa o perfil da UBS que opera o sistema: profissional (medico ou enfermeiro) ou administrador.
 
 namespace App\Models;
 

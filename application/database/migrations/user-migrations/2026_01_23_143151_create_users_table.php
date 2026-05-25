@@ -19,12 +19,12 @@ return new class extends Migration
             $table->date('birth');
             $table->boolean('sex');
             $table->string('cpf', 14)->unique();
-            $table->string('address');
-            $table->string('phone', 30);
+            $table->string('address')->nullable();
+            $table->string('phone', 30)->nullable();
             $table->string('email');
             $table->timestampTz('email_verified_at')->nullable();
             $table->string('password')->nullable();
-            $table->enum('role', ['admin', 'user']);
+            $table->enum('role', ['admin', 'professional']);
             $table->rememberToken();
             $table->timestampsTz();
             $table->softDeletesTz();

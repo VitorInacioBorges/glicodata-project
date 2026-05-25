@@ -17,8 +17,8 @@ return new class extends Migration
             $table->string('name');
             $table->boolean('sex');
             $table->string('cpf', 14)->unique();
-            $table->string('address');
-            $table->string('phone', 30);
+            $table->string('address')->nullable();
+            $table->string('phone', 30)->nullable();
             $table->date('birth');
             $table->timestampsTz();
             $table->softDeletesTz();

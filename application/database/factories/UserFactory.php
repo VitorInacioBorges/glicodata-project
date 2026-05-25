@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\UserRole;
 use App\Models\DistrictModel;
 use App\Models\UbsModel;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -47,7 +48,7 @@ class UserFactory extends Factory
             'email' => fake()->unique()->safeEmail(),
             'email_verified_at' => now(),
             'password' => null,
-            'role' => fake()->randomElement(['admin', 'user']),
+            'role' => fake()->randomElement([UserRole::Admin->value, UserRole::Professional->value]),
             'remember_token' => Str::random(10),
         ];
     }
