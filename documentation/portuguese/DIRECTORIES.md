@@ -128,14 +128,14 @@ Models Eloquent com `fillable`, casts, tabela explicita e relacionamentos.
 | --- | --- | --- |
 | `DistrictModel.php` | `districts` | `hasMany(UbsModel)` |
 | `UbsModel.php` | `ubs` | `belongsTo(DistrictModel)`, `hasMany(UserModel)`, `hasMany(PatientModel)`, `hasMany(AssessmentModel)`; tambem atua como entidade autenticavel da UBS. |
-| `UserModel.php` | `users` | `belongsTo(UbsModel)`, `hasMany(AssessmentModel)` |
-| `PatientModel.php` | `patients` | `belongsTo(UbsModel)`, `hasMany(AssessmentModel)` |
+| `UserModel.php` | `users` | Perfil profissional (medico/enfermeiro) ou administrador vinculado a UBS; `belongsTo(UbsModel)`, `hasMany(AssessmentModel)` |
+| `PatientModel.php` | `patients` | Paciente vinculado a UBS; `belongsTo(UbsModel)`, `hasMany(AssessmentModel)` |
 | `AssessmentModel.php` | `assessments` | `belongsTo(PatientModel)`, `belongsTo(UserModel)`, `belongsTo(UbsModel)`, `hasOne(RiskModel)`, `hasOne(ReportModel)` |
 | `RiskModel.php` | `risks` | `belongsTo(AssessmentModel)` |
 | `ReportModel.php` | `reports` | `belongsTo(AssessmentModel)` |
 | `AuditEventModel.php` | `audit_events` | `belongsTo(UbsModel)` para ator e UBS proprietaria |
 
-`UserModel`, `PatientModel`, `AssessmentModel`, `RiskModel` e `ReportModel` usam `SoftDeletes`. Usuarios e pacientes persistem `birth` e expõem `age` calculada.
+`UserModel`, `PatientModel`, `AssessmentModel`, `RiskModel` e `ReportModel` usam `SoftDeletes`. Usuarios e pacientes persistem `birth`, expõem `age` calculada e aceitam endereco/telefone nulos quando a informacao nao estiver disponivel.
 
 ### `application/app/Enums/`
 
@@ -143,7 +143,7 @@ Enums nativos do PHP usados como casts nos models.
 
 | Arquivo | Valores |
 | --- | --- |
-| `UserRole.php` | `admin`, `user` |
+| `UserRole.php` | `admin`, `professional` |
 | `RiskClassification.php` | `low`, `moderate`, `high` |
 
 ### `application/app/Utils/`
@@ -207,8 +207,8 @@ Rotas JSON carregadas com prefixo `/api`. Apenas `GET /api/auth/ubs/login` e `GE
 | `district-migrations/2026_01_23_143000_create_districts_table.php` | `districts` |
 | `ubs-migrations/2026_01_23_143100_create_ubs_table.php` | `ubs` |
 | `ubs-migrations/2026_01_23_143150_seed_ponta_grossa_catalog.php` | Carga inicial de 5 distritos e 42 UBS de Ponta Grossa. |
-| `user-migrations/2026_01_23_143151_create_users_table.php` | `users` |
-| `patient-migrations/2026_01_23_143200_create_patients_table.php` | `patients` |
+| `user-migrations/2026_01_23_143151_create_users_table.php` | `users`, com role `professional`/`admin` e contato opcional |
+| `patient-migrations/2026_01_23_143200_create_patients_table.php` | `patients`, com endereco e telefone opcionais |
 | `assessment-migrations/2026_01_23_143300_create_assessments_table.php` | `assessments` |
 | `risk-migrations/2026_01_23_143400_create_risks_table.php` | `risks` |
 | `report-migrations/2026_01_23_143500_create_reports_table.php` | `reports` |
@@ -218,19 +218,19 @@ Rotas JSON carregadas com prefixo `/api`. Apenas `GET /api/auth/ubs/login` e `GE
 | `2026_04_27_135537_create_sessions_table.php` | `sessions` |
 | `2026_04_27_145038_create_cache_table.php` | `cache`, `cache_locks` |
 
-As migrations foram consolidadas para instalacao limpa: usam UUID, timestamps com timezone, constraints PostgreSQL, soft delete operacional e auditoria. UBS com email `@seed.local` ou contato/endereco pendente sao inseridas inativas.
+As migrations foram consolidadas para instalacao limpa: usam UUID, timestamps com timezone, constraints PostgreSQL, soft delete operacional e auditoria. Em `users`, `professional` representa medicos e enfermeiros; `admin` tambem pode ser referenciado como executor de avaliacao. Em `users` e `patients`, endereco e telefone podem ser `NULL`. UBS com email `@seed.local` ou contato/endereco pendente sao inseridas inativas.
 
 ### `application/database/seeders/`
 
 | Arquivo | Responsabilidade |
 | --- | --- |
-| `DatabaseSeeder.php` | Cria distrito, UBS com `keycloak_id` e um usuario operacional de teste. |
+| `DatabaseSeeder.php` | Cria distrito, UBS com `keycloak_id` e um perfil `professional` operacional de teste. |
 
 ### `application/database/factories/`
 
 | Arquivo | Responsabilidade |
 | --- | --- |
-| `UserFactory.php` | Factory padrao de usuarios para testes e seeders. |
+| `UserFactory.php` | Factory padrao de perfis com role `professional` ou `admin` para testes e seeders. |
 
 ---
 

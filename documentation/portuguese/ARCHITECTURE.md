@@ -84,7 +84,7 @@ Na interface web, a arquitetura usa **Blade templates** com um layout base, pagi
 2. O guard keycloak valida o token no Keycloak e resolve a UBS ativa.
 3. Laravel roteia para PatientControllers\PatientController@store.
 4. Controller autoriza a operacao com PatientPolicy.
-5. StorePatientRequest valida CPF formatado, nascimento e demais campos; o controller usa `validated()`.
+5. StorePatientRequest valida CPF formatado e nascimento, normalizando endereco/telefone vazio para `null`; o controller usa `validated()`.
 6. O controller define `ubs_id` pelo token, sem aceitar escopo arbitrario do payload.
 7. Service cria paciente e `audit_events` dentro da mesma transacao.
 8. Eloquent persiste `birth`; a resposta serializada calcula `age`.
@@ -163,9 +163,9 @@ Nao ha interfaces formais para repositories neste momento. A separacao atual ain
 | ------------ | ----------------------------------------------------------------------------------------------------------- |
 | `District`   | Consulta do catalogo institucional fixo de distritos.                                                        |
 | `Ubs`        | Catalogo institucional; alteracao/ativacao somente por `audit-admin`.                                        |
-| `User`       | Profissionais vinculados a UBS, com `birth`, idade derivada e exclusao logica.                               |
-| `Patient`    | Pacientes vinculados a UBS, com `birth`, idade derivada e exclusao logica.                                   |
-| `Assessment` | Avaliacao da UBS; sua exclusao logica tambem remove risco e relatorio associados na mesma transacao.       |
+| `User`       | Perfis `professional` (medicos/enfermeiros) ou `admin` vinculados a UBS, com contato opcional e exclusao logica. |
+| `Patient`    | Pacientes vinculados a UBS, com contato opcional, `birth`, idade derivada e exclusao logica.                |
+| `Assessment` | Avaliacao da UBS vinculada por `user_id` ao executor da mesma unidade; aceita `professional` ou `admin`.    |
 | `Risk`       | Registro de risco associado a avaliacao, com percentual, score e classificacao `low`, `moderate` ou `high`. |
 | `Report`     | Relatorio associado a uma avaliacao, com titulo, descricao e comentario.                                    |
 | `AuditEvent` | Trilha de alteracoes com snapshots e redacao registrada sob autorizacao administrativa.                     |

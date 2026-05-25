@@ -130,8 +130,8 @@ Eloquent models with `fillable`, casts, explicit table names, and relationships.
 | --- | --- | --- |
 | `DistrictModel.php` | `districts` | `hasMany(UbsModel)` |
 | `UbsModel.php` | `ubs` | `belongsTo(DistrictModel)`, operational collections, and audit events; also acts as the authenticatable UBS entity. |
-| `UserModel.php` | `users` | `belongsTo(UbsModel)`, `hasMany(AssessmentModel)`; soft-deleted with age calculated from `birth`. |
-| `PatientModel.php` | `patients` | `belongsTo(UbsModel)`, `hasMany(AssessmentModel)`; soft-deleted with age calculated from `birth`. |
+| `UserModel.php` | `users` | UBS professional (doctor/nurse) or administrator; `belongsTo(UbsModel)`, `hasMany(AssessmentModel)`; soft-deleted with calculated age. |
+| `PatientModel.php` | `patients` | UBS-linked patient; `belongsTo(UbsModel)`, `hasMany(AssessmentModel)`; soft-deleted with calculated age. |
 | `AssessmentModel.php` | `assessments` | `belongsTo(PatientModel)`, `belongsTo(UserModel)`, `belongsTo(UbsModel)`, `hasOne(RiskModel)`, `hasOne(ReportModel)` |
 | `RiskModel.php` | `risks` | `belongsTo(AssessmentModel)` |
 | `ReportModel.php` | `reports` | `belongsTo(AssessmentModel)` |
@@ -143,7 +143,7 @@ Native PHP enums used as model casts.
 
 | File | Values |
 | --- | --- |
-| `UserRole.php` | `admin`, `user` |
+| `UserRole.php` | `admin`, `professional` |
 | `RiskClassification.php` | `low`, `moderate`, `high` |
 
 ### `application/app/Utils/`
@@ -206,8 +206,8 @@ JSON routes loaded with the `/api` prefix. Only `GET /api/auth/ubs/login` and `G
 | `district-migrations/2026_01_23_143000_create_districts_table.php` | `districts` |
 | `ubs-migrations/2026_01_23_143100_create_ubs_table.php` | `ubs` |
 | `ubs-migrations/2026_01_23_143150_seed_ponta_grossa_catalog.php` | Inserts the initial district/UBS institutional catalog; provisional units remain inactive. |
-| `user-migrations/2026_01_23_143151_create_users_table.php` | `users` |
-| `patient-migrations/2026_01_23_143200_create_patients_table.php` | `patients` |
+| `user-migrations/2026_01_23_143151_create_users_table.php` | `users`, with `professional`/`admin` roles and optional contact fields |
+| `patient-migrations/2026_01_23_143200_create_patients_table.php` | `patients`, with optional address and phone fields |
 | `assessment-migrations/2026_01_23_143300_create_assessments_table.php` | `assessments` |
 | `risk-migrations/2026_01_23_143400_create_risks_table.php` | `risks` |
 | `report-migrations/2026_01_23_143500_create_reports_table.php` | `reports` |
@@ -217,19 +217,19 @@ JSON routes loaded with the `/api` prefix. Only `GET /api/auth/ubs/login` and `G
 | `2026_04_27_135537_create_sessions_table.php` | `sessions` |
 | `2026_04_27_145038_create_cache_table.php` | `cache`, `cache_locks` |
 
-Entity migrations use UUIDs, PostgreSQL integrity constraints, soft-delete columns for operational records, and are separated by entity folder. This consolidated schema targets a fresh database; applying it over an already-migrated production database requires a separate migration strategy.
+Entity migrations use UUIDs, PostgreSQL integrity constraints, soft-delete columns for operational records, and are separated by entity folder. For users, `professional` represents doctors and nurses; `admin` may also be recorded as the assessment executor. User and patient address/phone fields may be `NULL` when unavailable. This consolidated schema targets a fresh database; applying it over an already-migrated production database requires a separate migration strategy.
 
 ### `application/database/seeders/`
 
 | File | Responsibility |
 | --- | --- |
-| `DatabaseSeeder.php` | Creates a district, a UBS with `keycloak_id`, and an operational test user. |
+| `DatabaseSeeder.php` | Creates a district, a UBS with `keycloak_id`, and an operational `professional` test profile. |
 
 ### `application/database/factories/`
 
 | File | Responsibility |
 | --- | --- |
-| `UserFactory.php` | Default user factory for tests and seeders. |
+| `UserFactory.php` | Default `professional`/`admin` user-profile factory for tests and seeders. |
 
 ---
 

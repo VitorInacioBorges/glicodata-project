@@ -113,6 +113,8 @@ Policies por entidade sao registradas em `AppServiceProvider` e chamadas pelos c
 | **Email** | Requests convertem email para lowercase; PostgreSQL aplica check e indice unico por `LOWER(email)`. |
 | **CPF** | Regra `ValidCpf` exige formato `000.000.000-00` e digitos verificadores validos. |
 | **Nascimento** | `User` e `Patient` persistem `birth`; `age` e calculada na serializacao. |
+| **Contato opcional** | Endereco e telefone de `User` e `Patient` aceitam `NULL`; strings vazias sao normalizadas para `null` nos Form Requests. |
+| **Papel profissional** | `UserRole::Professional` identifica medicos e enfermeiros; `admin` tambem pode ser o executor associado a uma avaliacao. |
 | **Mass assignment** | Models usam `fillable`, reduzindo exposicao de campos nao permitidos. |
 | **Senha** | `UserModel` e `UbsModel` ocultam `password` e aplicam cast `hashed`. |
 | **Token Bearer** | `KeycloakUbsAuthService` consulta o endpoint `userinfo` do Keycloak para resolver a UBS ativa. |

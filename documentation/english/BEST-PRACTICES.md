@@ -110,6 +110,8 @@ Entity policies are registered in `AppServiceProvider` and called by controllers
 | **UUID** | `ValidateUtils::validateId()` uses `Str::isUuid()`. |
 | **Email** | `ValidateUtils::validateEmail()` uses Laravel validator with `email:rfc` and `max:255`. |
 | **HTTP payloads** | Resource Form Requests validate normalized data, formatted CPF, date of birth, and pagination before services run. |
+| **Optional contact** | `User` and `Patient` address/phone may be `NULL`; their Form Requests normalize blank input to `null`. |
+| **Professional role** | `UserRole::Professional` identifies doctors and nurses; `admin` may also be associated as an assessment executor. |
 | **Mass assignment** | Models use `fillable`, reducing exposure of disallowed fields. |
 | **Password** | `UserModel` and `UbsModel` hide `password` and apply the `hashed` cast. |
 | **Bearer token** | `KeycloakUbsAuthService` calls Keycloak's `userinfo` endpoint to resolve the active UBS. |

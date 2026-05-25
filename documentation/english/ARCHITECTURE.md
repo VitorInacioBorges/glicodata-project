@@ -83,7 +83,7 @@ On the web interface side, the architecture uses **Blade templates** with a base
 1. Client sends POST /api/patients with JSON body and Authorization: Bearer <token>.
 2. The keycloak guard validates the token in Keycloak and resolves the active UBS.
 3. Laravel routes the request to PatientControllers\PatientController@store.
-4. StorePatientRequest validates and normalizes the payload; the controller uses `$request->validated()`.
+4. StorePatientRequest validates CPF and birth date and normalizes blank address/phone input to `null`; the controller uses `$request->validated()`.
 5. Controller injects the authenticated `ubs_id` and authorizes the operation with PatientPolicy.
 6. PatientService executes persistence and the audit event in a database transaction.
 7. PatientRepository creates the record through PatientModel::newQuery()->create($data).
@@ -162,9 +162,9 @@ There are no formal repository interfaces at the moment. The current separation 
 | ------------ | ------------------------------------------------------------------------------------------------------------------------ |
 | `District`   | Read-only institutional district catalog for UBS units.                                                                  |
 | `Ubs`        | Institutional unit contact/activation data administered by the Keycloak `audit-admin` role.                             |
-| `User`       | Soft-deletable operational user registration linked to a UBS; stores birth date and exposes calculated age.             |
-| `Patient`    | Soft-deletable patient registration linked to a UBS; stores birth date and exposes calculated age.                      |
-| `Assessment` | UBS assessment; logical deletion also deletes its associated risk and report in the same transaction.                    |
+| `User`       | UBS-linked `professional` (doctor/nurse) or `admin` profile with optional contact data and logical deletion.            |
+| `Patient`    | UBS-linked patient with optional contact data, stored birth date, calculated age, and logical deletion.                 |
+| `Assessment` | UBS assessment associated through `user_id` with a same-unit executor, either `professional` or `admin`.                |
 | `Risk`       | Risk record associated with an assessment, including percentage, score, and `low`, `moderate`, or `high` classification. |
 | `Report`     | Report associated with an assessment, including title, description, and comment.                                         |
 | `AuditEvent` | Immutable audit trail with before/after `jsonb` snapshots and audited sensitive-payload redaction.                     |

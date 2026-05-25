@@ -13,7 +13,7 @@
 | **Repositories** | Singular resource + `Repository` | `DistrictRepository` |
 | **Models** | Singular resource + `Model` | `UbsModel`, `ReportModel` |
 | **Enums** | `PascalCase` | `UserRole`, `RiskClassification` |
-| **Enum values** | Persisted values in `lowercase` | `admin`, `user`, `low` |
+| **Enum values** | Persisted values in `lowercase` | `admin`, `professional`, `low` |
 | **Methods** | `camelCase` | `getUserById()`, `createRisk()` |
 | **Variables** | `camelCase` | `$perPage`, `$assessment` |
 | **Tables** | Plural `snake_case` | `users`, `assessments` |
