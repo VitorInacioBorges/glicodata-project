@@ -1,0 +1,41 @@
+@import 'tailwindcss';
+
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../storage/framework/views/*.php';
+@source '../**/*.blade.php';
+@source '../**/*.js';
+
+@theme {
+    --font-sans: 'Inter', 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
+        'Segoe UI Symbol', 'Noto Color Emoji';
+}
+
+:root {
+    --ubs-mint: #0f766e;
+    --ubs-ink: #112b32;
+    --ubs-line: #e2eee9;
+}
+
+.ubs-surface {
+    background:
+        radial-gradient(circle at 15% 5%, rgba(20, 184, 166, 0.12), transparent 28rem),
+        radial-gradient(circle at 92% 18%, rgba(14, 116, 144, 0.1), transparent 30rem),
+        #f7faf9;
+}
+
+.ubs-panel-shadow {
+    box-shadow: 0 22px 55px -36px rgba(15, 46, 48, 0.34);
+}
+
+.ubs-grid {
+    background-image:
+        linear-gradient(rgba(15, 118, 110, 0.045) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(15, 118, 110, 0.045) 1px, transparent 1px);
+    background-size: 42px 42px;
+}
+
+.ubs-login-art {
+    background:
+        linear-gradient(145deg, rgba(13, 148, 136, 0.94), rgba(17, 43, 50, 0.98)),
+        var(--ubs-ink);
+}
