@@ -26,6 +26,7 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 use SocialiteProviders\Keycloak\Provider as KeycloakProvider;
 use SocialiteProviders\Manager\SocialiteWasCalled;
+use Throwable;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -47,6 +48,10 @@ class AppServiceProvider extends ServiceProvider
         });
 
         Auth::viaRequest('keycloak', function (Request $request): ?UbsModel {
+            if ((bool) config('glicodata.auth_disabled')) {
+                return $this->resolveDevelopmentUbs();
+            }
+
             return app(KeycloakUbsAuthService::class)
                 ->findUbsFromBearerToken($request->bearerToken());
         });
@@ -66,5 +71,34 @@ class AppServiceProvider extends ServiceProvider
         $directories = glob($mainPath.'/*', GLOB_ONLYDIR);
 
         $this->loadMigrationsFrom(array_merge([$mainPath], $directories));
+    }
+
+    private function resolveDevelopmentUbs(): ?UbsModel
+    {
+        try {
+            $email = trim((string) config('glicodata.auth_bypass_ubs_email'));
+
+            if ($email !== '') {
+                $ubs = UbsModel::query()
+                    ->whereRaw('LOWER(email) = ?', [strtolower($email)])
+                    ->first();
+
+                if ($ubs instanceof UbsModel) {
+                    return $ubs->setAuditAdmin(true);
+                }
+            }
+
+            return UbsModel::query()
+                ->where('is_active', true)
+                ->orderBy('name')
+                ->first()
+                ?->setAuditAdmin(true)
+                ?? UbsModel::query()
+                    ->orderBy('name')
+                    ->first()
+                    ?->setAuditAdmin(true);
+        } catch (Throwable) {
+            return null;
+        }
     }
 }

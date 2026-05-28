@@ -39,6 +39,7 @@ return [
         'client_id' => env('KEYCLOAK_CLIENT_ID'),
         'client_secret' => env('KEYCLOAK_CLIENT_SECRET'),
         'redirect' => env('KEYCLOAK_REDIRECT_URI'),
+        'web_redirect' => env('KEYCLOAK_WEB_REDIRECT_URI', rtrim((string) env('APP_URL', 'http://localhost'), '/').'/auth/ubs/callback'),
         'base_url' => env('KEYCLOAK_BASE_URL'),
         'realms' => env('KEYCLOAK_REALM'),
     ],
