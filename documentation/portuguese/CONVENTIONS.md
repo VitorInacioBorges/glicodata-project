@@ -23,8 +23,8 @@
 
 | Elemento | Convencao atual | Exemplo |
 | --- | --- | --- |
-| **Views Blade** | `kebab` ou nome simples em minusculas | `home.blade.php`, `register.blade.php` |
-| **Layouts Blade** | Subdiretorio `layouts/` | `layouts/main.blade.php` |
+| **Views Blade** | Subpastas por fluxo e entidade | `ubs/patients/index.blade.php`, `ubs/auth/login.blade.php` |
+| **Layouts Blade** | Subdiretorio `layouts/` | `layouts/app.blade.php` |
 | **CSS de tela** | Nome descritivo com pontos | `register.styles.css` |
 | **JS publico** | Nome simples em minusculas | `scripts.js` |
 | **Entradas Vite** | `resources/css/app.css`, `resources/js/app.js` | Configuradas em `vite.config.js` |
@@ -139,7 +139,8 @@ O mesmo padrao existe para:
 | **Rotas** | `routes/api.php` recebe prefixo `/api`; `routes/web.php` permanece sem prefixo API. |
 | **Respostas** | Controllers retornam JSON para API; `store` usa status 201 e delete usa 204. |
 | **Validacao HTTP** | Form Requests normalizam e validam entrada; controllers repassam `$request->validated()`. |
-| **Autenticacao** | API usa guard `keycloak`; login/callback de UBS sao as unicas rotas abertas. |
+| **Autenticacao** | API usa guard `keycloak`; login/callback de UBS sao as unicas rotas abertas em producao. |
+| **Bypass local** | `GLICODATA_AUTH_DISABLED` so pode ser usado em desenvolvimento para visualizacao e chamadas API sem token. |
 | **Autorizacao** | Controllers usam `Gate::authorize()`; a role Keycloak `audit-admin` administra UBS e auditoria global. |
 | **Auditoria** | Escritas operacionais e vinculacao Keycloak registram snapshots `jsonb`; redacao e auditada. |
 
@@ -147,5 +148,4 @@ O mesmo padrao existe para:
 
 ## Inconsistencias Conhecidas
 
-- O layout referencia `/css/register.styles.css` em `register.blade.php`, mas esse arquivo esta em `resources/css/register.styles.css`; em `public/css` existe apenas `styles.css` no checkout versionado.
 - Os testes existentes ainda precisam ser atualizados em uma etapa propria para os contratos `birth`, `SoftDeletes`, Keycloak e Form Requests.

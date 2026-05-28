@@ -11,7 +11,7 @@ This choice addresses three core needs of this project:
 3. **Application rule reuse**: UUID and email lookup checks, tenant rules, transactions, logical deletion, and audit recording live in services instead of controllers or repositories.
 4. **UBS-scoped access control**: the API uses Keycloak/OpenID to authenticate the UBS account and policies to limit access to unit data; the `audit-admin` client role governs institutional administration and global audit access.
 
-On the web interface side, the architecture uses **Blade templates** with a base layout, simple pages, and public assets. Vite is configured to compile `resources/css/app.css` and `resources/js/app.js`, while some screens use CSS under `public/css`.
+On the web interface side, the architecture uses **Blade templates** with a base layout, UBS screens, and Vite-compiled assets. Bootstrap is imported from npm in `resources/css/app.css` and `resources/js/app.js`, and navigation SVGs live under `public/images`.
 
 ---
 
@@ -59,17 +59,17 @@ On the web interface side, the architecture uses **Blade templates** with a base
 ```text
 ┌─────────────────────────────────────────────────────────────┐
 │                      resources/views                        │
-│  home.blade.php | register.blade.php | contact.blade.php    │
+│  ubs/auth, ubs/lobby, listings, and entity detail screens   │
 └──────────────────────────────┬──────────────────────────────┘
                                │
 ┌──────────────────────────────▼──────────────────────────────┐
-│                 resources/views/layouts/main.blade.php      │
-│  Base HTML, Bootstrap CDN, Roboto font, and public assets   │
+│                  resources/views/layouts/app.blade.php      │
+│  Base layout, UBS navigation, and local-bypass warning      │
 └──────────────────────────────┬──────────────────────────────┘
                                │
 ┌──────────────────────────────▼──────────────────────────────┐
-│                    public/css and public/js                 │
-│  styles.css and scripts.js; register.styles.css is in resources/css│
+│               resources/css, resources/js, and public/images│
+│  Bootstrap through Vite, product CSS, and module SVGs       │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -115,13 +115,15 @@ On the web interface side, the architecture uses **Blade templates** with a base
 7. API returns access_token, refresh_token, expires_in, and UBS data.
 ```
 
-### Web: Registration Form
+### Web: UBS Login and Navigation
 
 ```text
-1. Client opens GET /register/{id?}.
-2. The route renders resources/views/register.blade.php.
-3. The form submits POST to the named route web, exposed as /login.
-4. The route redirects to `ubs.auth.login`, using Keycloak as the primary authentication source.
+1. Client opens GET /login.
+2. The route renders resources/views/ubs/auth/login.blade.php or redirects to /ubs/lobby when a session already exists.
+3. The institutional access link calls GET /auth/ubs/redirect.
+4. UbsAuthController uses `KEYCLOAK_WEB_REDIRECT_URI` to authenticate in Keycloak and create an `auth:ubs` session.
+5. The /ubs/lobby, /ubs/pacientes, /ubs/profissionais, and /ubs/avaliacoes pages use the shared Blade layout.
+6. In local development, `GLICODATA_AUTH_DISABLED=true` temporarily removes the `auth:ubs` middleware from those pages.
 ```
 
 ---
@@ -185,4 +187,4 @@ Assessment 1 ── 1 Report
 Ubs      1 ── N AuditEvent
 ```
 
-These relationships are declared in the models under `application/app/Models`. The consolidated migrations target a fresh PostgreSQL deployment, enforce UBS ownership for assessments, add logical deletion/audit storage, and insert the initial institutional catalog; they are loaded from resource subdirectories by `AppServiceProvider`.
+These relationships are declared in the models under `glicodata/app/Models`. The consolidated migrations target a fresh PostgreSQL deployment, enforce UBS ownership for assessments, add logical deletion/audit storage, and insert the initial institutional catalog; they are loaded from resource subdirectories by `AppServiceProvider`.

@@ -74,8 +74,7 @@ For new systems in the NTI/UEPG context, PostgreSQL is the project default datab
 | --- | --- | --- |
 | `vite` | `7.3.2` | Build/dev server |
 | `laravel-vite-plugin` | `2.1.0` | Laravel/Vite integration |
-| `tailwindcss` | `4.2.4` | Utility CSS |
-| `@tailwindcss/vite` | `4.2.4` | Tailwind plugin |
+| `bootstrap` | `5.3.8` | Blade interface components and styles compiled by Vite |
 | `axios` | `1.15.2` | HTTP client |
 | `concurrently` | `9.2.1` | Parallel process execution |
 
@@ -122,9 +121,11 @@ Before running the application:
 3. Copy `.env.example` to `.env`.
 4. Generate `APP_KEY`.
 5. Configure PostgreSQL credentials.
-6. Configure `KEYCLOAK_CLIENT_ID`, `KEYCLOAK_CLIENT_SECRET`, `KEYCLOAK_REDIRECT_URI`, `KEYCLOAK_BASE_URL`, and `KEYCLOAK_REALM`.
+6. Configure `KEYCLOAK_CLIENT_ID`, `KEYCLOAK_CLIENT_SECRET`, `KEYCLOAK_REDIRECT_URI`, `KEYCLOAK_WEB_REDIRECT_URI`, `KEYCLOAK_BASE_URL`, and `KEYCLOAK_REALM`.
 7. Configure the Keycloak `audit-admin` client role only for authorized institutional administrators.
 8. Run migrations on a new PostgreSQL database, or prepare reviewed transition migrations for an existing database.
+
+For local visual development without a configured Keycloak provider, `GLICODATA_AUTH_DISABLED=true` temporarily opens web routes and makes the `keycloak` guard resolve one active local UBS. Keep it `false` in staging and production.
 
 The current migrations include the initial Ponta Grossa UBS and district catalog. Records with provisional email or contact information are inserted inactive and cannot authenticate until administratively reviewed.
 

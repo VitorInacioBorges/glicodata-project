@@ -6,7 +6,7 @@
 
 ```bash
 git clone <repository-url> ubs-system
-cd ubs-system/application
+cd ubs-system/glicodata
 ```
 
 ### 2. Install Dependencies
@@ -52,9 +52,19 @@ Configure the UBS authentication provider:
 KEYCLOAK_CLIENT_ID=your_client_id
 KEYCLOAK_CLIENT_SECRET=your_client_secret
 KEYCLOAK_REDIRECT_URI="${APP_URL}/api/auth/ubs/callback"
+KEYCLOAK_WEB_REDIRECT_URI="${APP_URL}/auth/ubs/callback"
 KEYCLOAK_BASE_URL=https://keycloak.example
 KEYCLOAK_REALM=your_realm
 ```
+
+To temporarily work on design and API calls without a configured local Keycloak provider:
+
+```env
+GLICODATA_AUTH_DISABLED=true
+GLICODATA_AUTH_BYPASS_UBS_EMAIL=
+```
+
+This mode opens UBS web routes and makes the `keycloak` guard resolve one active local UBS. Never enable it in staging or production.
 
 ### 4. Run Migrations
 
@@ -122,7 +132,7 @@ This script runs in parallel:
 
 ## Available Scripts
 
-### PHP / Composer (`application/composer.json`)
+### PHP / Composer (`glicodata/composer.json`)
 
 | Script | Command | Description |
 | --- | --- | --- |
@@ -130,7 +140,7 @@ This script runs in parallel:
 | `dev` | `concurrently` with Laravel server, queue, pail, and Vite | Full development environment. |
 | `test` | `php artisan config:clear --ansi` and `php artisan test` | Runs Laravel tests. |
 
-### JavaScript (`application/package.json`)
+### JavaScript (`glicodata/package.json`)
 
 | Script | Command | Description |
 | --- | --- | --- |
@@ -173,14 +183,21 @@ Every route above except `/api/auth/ubs/login` and `/api/auth/ubs/callback` requ
 Authorization: Bearer <keycloak_token>
 ```
 
+With `GLICODATA_AUTH_DISABLED=true` in a local environment, the middleware remains registered, but the `keycloak` guard accepts requests without a Bearer token to ease development.
+
 Web routes stay outside the `/api` prefix:
 
 | Method | Route | Description |
 | --- | --- | --- |
-| `GET` | `/` | Renders the home page. |
-| `GET` | `/contact` | Renders the contact page. |
-| `GET` | `/register/{id?}` | Renders the registration form. |
-| `POST` | `/login` | Redirects to the UBS Keycloak login. |
+| `GET` | `/` | Redirects to `/login`. |
+| `GET` | `/login` | Renders UBS login or redirects to the lobby. |
+| `GET` | `/auth/ubs/redirect` | Starts web Keycloak login. |
+| `GET` | `/auth/ubs/callback` | Receives the web callback and creates the `auth:ubs` session. |
+| `GET` | `/ubs/lobby` | Renders the operational lobby. |
+| `GET` | `/ubs/pacientes*` | Renders patient listing and visual detail screens. |
+| `GET` | `/ubs/profissionais*` | Renders professional listing and visual detail screens. |
+| `GET` | `/ubs/avaliacoes*` | Renders assessment listing and visual detail screens. |
+| `POST` | `/ubs/logout` | Ends the UBS web session. |
 
 ---
 
@@ -251,7 +268,7 @@ Laravel Framework 12.60.2
 The repository does not include a versioned deploy configuration. A minimal flow for a VPS with Nginx/Apache and PHP-FPM would be:
 
 ```bash
-cd /var/www/ubs-system/application
+cd /var/www/ubs-system/glicodata
 git pull
 composer install --no-dev --optimize-autoloader
 npm install
@@ -265,7 +282,7 @@ php artisan view:cache
 Make sure the web server points to:
 
 ```text
-application/public
+glicodata/public
 ```
 
 ### Post-deploy Checklist
@@ -284,6 +301,7 @@ curl -i https://your-domain.example/api
 - Use a persistent PostgreSQL database.
 - Apply this consolidated migration set only to a fresh production database, or prepare reviewed transition migrations for existing data.
 - Provision and restrict the Keycloak client role `audit-admin`.
+- Ensure `GLICODATA_AUTH_DISABLED=false` before caching configuration.
 - Restrict `audit_events` database and backup access because its snapshots may contain personal data; define retention/redaction procedures with NTI.
 - Review and activate UBS catalog entries containing provisional contact information before allowing login.
 - Ensure write permission for `storage/` and `bootstrap/cache/`.

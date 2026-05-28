@@ -22,10 +22,8 @@
 | **Blade** | Included in Laravel | Server-side templates in `resources/views`. |
 | **Vite** | `^7.0.7`; `7.3.2` installed | Asset build and dev server. |
 | **laravel-vite-plugin** | `^2.0.0`; `2.1.0` installed | Laravel/Vite integration. |
-| **Tailwind CSS** | `^4.0.0`; `4.2.4` installed | Utility CSS configured in `resources/css/app.css`. |
-| **@tailwindcss/vite** | `^4.0.0`; `4.2.4` installed | Tailwind plugin for Vite. |
 | **Axios** | `^1.11.0`; `1.15.2` installed | HTTP client exposed by `resources/js/bootstrap.js`. |
-| **Bootstrap CDN** | `5.3.8` in the Blade layout | Quick styling for the current views. |
+| **Bootstrap** | `^5.3.8`; `5.3.8` installed | Components and styles imported by Vite in `resources/css/app.css` and `resources/js/app.js`. |
 
 ### Development Tools
 
@@ -68,7 +66,7 @@ feat(audit): registra eventos das operacoes persistidas
 
 ### REST CRUD by Resource
 
-Operational resources use `Route::apiResource` CRUD protected by `auth:keycloak`. Districts are read-only, and UBS allows read and administrative update by a Keycloak administrative role. Audit is available through dedicated protected read and redaction routes.
+Operational resources use `Route::apiResource` CRUD protected by `auth:keycloak`. Districts are read-only, and UBS allows read and administrative update by a Keycloak administrative role. Audit is available through dedicated protected read and redaction routes. In local development, `GLICODATA_AUTH_DISABLED=true` makes the guard resolve a local UBS so API calls can be exercised without a Bearer token.
 
 ---
 
@@ -78,7 +76,7 @@ Operational resources use `Route::apiResource` CRUD protected by `auth:keycloak`
 
 | Aspect | Implementation |
 | --- | --- |
-| **ORM** | Eloquent Models in `application/app/Models`. |
+| **ORM** | Eloquent Models in `glicodata/app/Models`. |
 | **Model IDs** | Models use `HasUuids` and entity migrations use UUID columns. |
 | **Pagination** | `PaginationRequest` accepts `per_page` only in the 1 to 20 range. |
 | **Casts** | `boolean`, `date`, `array`, `float`, native PHP enums, and age calculated from `birth`. |
@@ -89,7 +87,7 @@ Operational resources use `Route::apiResource` CRUD protected by `auth:keycloak`
 
 ### Web Interface — State
 
-The current views are rendered server-side with Blade. There is no global frontend state, SPA routing, or client-side authentication implemented in the versioned code.
+The current views are rendered server-side with Blade for UBS login, lobby, listings, and detail screens. There is no global frontend state, SPA routing, or client-side authentication implemented in the versioned code.
 
 ### Client ↔ Backend Communication
 
@@ -97,6 +95,7 @@ The current views are rendered server-side with Blade. There is no global fronte
 | --- | --- |
 | **API format** | JSON for REST controllers. |
 | **Authentication** | `Authorization: Bearer <token>` validated against Keycloak by the `keycloak` guard. |
+| **Local bypass** | `GLICODATA_AUTH_DISABLED=true` opens local visual browsing and API calls without a token; it must remain disabled outside development. |
 | **Pagination** | `?per_page=N` query string, with an effective maximum of 20. |
 | **Payload validation** | Form Requests expose only `$request->validated()` to controllers. |
 | **ID validation** | UUID validation through `ValidateUtils::validateId()` for lookups, updates, and deletes by ID. |

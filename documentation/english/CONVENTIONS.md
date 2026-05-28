@@ -23,8 +23,8 @@
 
 | Element | Current convention | Example |
 | --- | --- | --- |
-| **Blade views** | Lowercase simple names or kebab-style names | `home.blade.php`, `register.blade.php` |
-| **Blade layouts** | `layouts/` subdirectory | `layouts/main.blade.php` |
+| **Blade views** | Flow and entity subdirectories | `ubs/patients/index.blade.php`, `ubs/auth/login.blade.php` |
+| **Blade layouts** | `layouts/` subdirectory | `layouts/app.blade.php` |
 | **Screen CSS** | Descriptive names with dots | `register.styles.css` |
 | **Public JS** | Simple lowercase names | `scripts.js` |
 | **Vite entries** | `resources/css/app.css`, `resources/js/app.js` | Configured in `vite.config.js` |
@@ -139,7 +139,8 @@ The same pattern exists for:
 | **Routes** | `routes/api.php` receives the `/api` prefix; `routes/web.php` stays outside the API prefix. |
 | **Responses** | Controllers return JSON for the API; `store` uses status 201 and delete uses 204. |
 | **HTTP validation** | Form Requests normalize and validate input; controllers pass `$request->validated()`. |
-| **Authentication** | API uses the `keycloak` guard; UBS login/callback are the only open API routes. |
+| **Authentication** | API uses the `keycloak` guard; UBS login/callback are the only open API routes in production. |
+| **Local bypass** | `GLICODATA_AUTH_DISABLED` may only be used in development for visual browsing and API calls without a token. |
 | **Authorization** | Controllers use `Gate::authorize()`; the Keycloak `audit-admin` client role manages UBS data and global audit access. |
 | **Audit** | Operational writes and Keycloak linking record `jsonb` snapshots; payload redaction is itself audited. |
 
@@ -147,5 +148,4 @@ The same pattern exists for:
 
 ## Known Inconsistencies
 
-- The register view references `/css/register.styles.css`, but the checkout only versions `public/css/styles.css`; `register.styles.css` is present under `resources/css`.
 - Existing tests still require a dedicated update for the `birth`, `SoftDeletes`, Keycloak, and Form Request contracts.

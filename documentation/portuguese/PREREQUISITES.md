@@ -74,8 +74,7 @@ Para novos sistemas no contexto NTI/UEPG, PostgreSQL e o banco padrao do projeto
 | --- | --- | --- |
 | `vite` | `7.3.2` | Build/dev server |
 | `laravel-vite-plugin` | `2.1.0` | Integracao Laravel/Vite |
-| `tailwindcss` | `4.2.4` | CSS utilitario |
-| `@tailwindcss/vite` | `4.2.4` | Plugin Tailwind |
+| `bootstrap` | `5.3.8` | Componentes e estilos da interface Blade compilados pelo Vite |
 | `axios` | `1.15.2` | Cliente HTTP |
 | `concurrently` | `9.2.1` | Execucao paralela de processos |
 
@@ -122,9 +121,11 @@ Antes de executar a aplicacao:
 3. Copie `.env.example` para `.env`.
 4. Gere `APP_KEY`.
 5. Configure as credenciais PostgreSQL.
-6. Configure `KEYCLOAK_CLIENT_ID`, `KEYCLOAK_CLIENT_SECRET`, `KEYCLOAK_REDIRECT_URI`, `KEYCLOAK_BASE_URL` e `KEYCLOAK_REALM`.
+6. Configure `KEYCLOAK_CLIENT_ID`, `KEYCLOAK_CLIENT_SECRET`, `KEYCLOAK_REDIRECT_URI`, `KEYCLOAK_WEB_REDIRECT_URI`, `KEYCLOAK_BASE_URL` e `KEYCLOAK_REALM`.
 7. Configure a client role Keycloak `audit-admin` somente para administradores institucionais autorizados.
 8. Rode migrations em banco PostgreSQL novo ou prepare migrations de transicao revisadas para uma base existente.
+
+Para desenvolvimento visual local sem Keycloak configurado, `GLICODATA_AUTH_DISABLED=true` libera temporariamente as rotas web e faz o guard `keycloak` resolver uma UBS ativa local. Mantenha `false` em homologacao e producao.
 
 As migrations atuais incluem a carga inicial de UBS e distritos de Ponta Grossa. Registros com email ou contato provisório entram inativos e nao autenticam ate regularizacao administrativa.
 

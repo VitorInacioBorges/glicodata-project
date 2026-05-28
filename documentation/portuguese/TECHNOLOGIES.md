@@ -22,10 +22,8 @@
 | **Blade** | Incluso no Laravel | Templates server-side em `resources/views`. |
 | **Vite** | `^7.0.7`; `7.3.2` instalado | Build de assets e dev server. |
 | **laravel-vite-plugin** | `^2.0.0`; `2.1.0` instalado | Integracao entre Laravel e Vite. |
-| **Tailwind CSS** | `^4.0.0`; `4.2.4` instalado | Utilitario CSS configurado em `resources/css/app.css`. |
-| **@tailwindcss/vite** | `^4.0.0`; `4.2.4` instalado | Plugin Tailwind para Vite. |
 | **Axios** | `^1.11.0`; `1.15.2` instalado | Cliente HTTP exposto em `resources/js/bootstrap.js`. |
-| **Bootstrap CDN** | `5.3.8` no layout Blade | Estilizacao rapida das views atuais. |
+| **Bootstrap** | `^5.3.8`; `5.3.8` instalado | Componentes e estilos importados por Vite em `resources/css/app.css` e `resources/js/app.js`. |
 
 ### Ferramentas de Desenvolvimento
 
@@ -68,7 +66,7 @@ feat(audit): registra eventos das operacoes persistidas
 
 ### CRUD REST por Recurso
 
-Os recursos operacionais usam `Route::apiResource` com CRUD protegido por `auth:keycloak`. Distritos sao somente leitura e UBS permite consulta e atualizacao por perfil administrativo do Keycloak. A auditoria e acessada por rotas especificas de consulta e redacao, tambem protegidas.
+Os recursos operacionais usam `Route::apiResource` com CRUD protegido por `auth:keycloak`. Distritos sao somente leitura e UBS permite consulta e atualizacao por perfil administrativo do Keycloak. A auditoria e acessada por rotas especificas de consulta e redacao, tambem protegidas. Em desenvolvimento local, `GLICODATA_AUTH_DISABLED=true` faz o guard resolver uma UBS local para permitir chamadas sem Bearer token.
 
 ---
 
@@ -78,7 +76,7 @@ Os recursos operacionais usam `Route::apiResource` com CRUD protegido por `auth:
 
 | Aspecto | Implementacao |
 | --- | --- |
-| **ORM** | Eloquent Models em `application/app/Models`. |
+| **ORM** | Eloquent Models em `glicodata/app/Models`. |
 | **IDs nos models** | Models usam `HasUuids` e migrations das entidades usam colunas UUID. |
 | **Paginacao** | `PaginationRequest` aceita `per_page` apenas no intervalo de 1 a 20. |
 | **Casts** | `boolean`, `date`, `array`, `float`, enums nativos PHP e idade calculada a partir de `birth`. |
@@ -89,7 +87,7 @@ Os recursos operacionais usam `Route::apiResource` com CRUD protegido por `auth:
 
 ### Interface Web — Estado
 
-As views atuais sao renderizadas no servidor com Blade. Nao existe estado global front-end, roteamento SPA ou autenticacao client-side implementada no codigo versionado.
+As views atuais sao renderizadas no servidor com Blade para login UBS, lobby, listagens e telas de detalhe. Nao existe estado global front-end, roteamento SPA ou autenticacao client-side implementada no codigo versionado.
 
 ### Comunicacao Cliente ↔ Backend
 
@@ -97,6 +95,7 @@ As views atuais sao renderizadas no servidor com Blade. Nao existe estado global
 | --- | --- |
 | **Formato da API** | JSON para controllers REST. |
 | **Autenticacao** | `Authorization: Bearer <token>` validado contra Keycloak pelo guard `keycloak`. |
+| **Bypass local** | `GLICODATA_AUTH_DISABLED=true` libera visualizacao local e chamadas de API sem token; deve ficar desativado fora de desenvolvimento. |
 | **Paginacao** | Query string `?per_page=N`, com limite maximo efetivo de 20. |
 | **Validacao de payload** | Form Requests entregam somente `$request->validated()` aos controllers. |
 | **Validacao de ID** | UUID validado por `ValidateUtils::validateId()` nas buscas, updates e deletes por ID. |

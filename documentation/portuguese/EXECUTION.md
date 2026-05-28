@@ -6,7 +6,7 @@
 
 ```bash
 git clone <url-do-repositorio> ubs-system
-cd ubs-system/application
+cd ubs-system/glicodata
 ```
 
 ### 2. Instalar Dependencias
@@ -52,11 +52,21 @@ Configure o provider de autenticacao da UBS:
 KEYCLOAK_CLIENT_ID=seu_client_id
 KEYCLOAK_CLIENT_SECRET=seu_client_secret
 KEYCLOAK_REDIRECT_URI="${APP_URL}/api/auth/ubs/callback"
+KEYCLOAK_WEB_REDIRECT_URI="${APP_URL}/auth/ubs/callback"
 KEYCLOAK_BASE_URL=https://keycloak.example
 KEYCLOAK_REALM=seu_realm
 ```
 
 Configure no client Keycloak a role `audit-admin` em `resource_access.<KEYCLOAK_CLIENT_ID>.roles` para a conta institucional que podera corrigir/ativar UBS e administrar redacao de auditoria.
+
+Para trabalhar temporariamente em design e chamadas API sem o Keycloak configurado localmente:
+
+```env
+GLICODATA_AUTH_DISABLED=true
+GLICODATA_AUTH_BYPASS_UBS_EMAIL=
+```
+
+Esse modo libera as rotas web da UBS e faz o guard `keycloak` resolver uma UBS ativa local. Nunca use essa flag ativada em homologacao ou producao.
 
 ### 4. Executar Migrations
 
@@ -126,7 +136,7 @@ Esse script executa em paralelo:
 
 ## Scripts Disponiveis
 
-### PHP / Composer (`application/composer.json`)
+### PHP / Composer (`glicodata/composer.json`)
 
 | Script | Comando | Descricao |
 | --- | --- | --- |
@@ -134,7 +144,7 @@ Esse script executa em paralelo:
 | `dev` | `concurrently` com Laravel server, queue, pail e Vite | Ambiente de desenvolvimento completo. |
 | `test` | `php artisan config:clear --ansi` e `php artisan test` | Executa testes Laravel. |
 
-### JavaScript (`application/package.json`)
+### JavaScript (`glicodata/package.json`)
 
 | Script | Comando | Descricao |
 | --- | --- | --- |
@@ -177,14 +187,21 @@ Todas as rotas acima, exceto `/api/auth/ubs/login` e `/api/auth/ubs/callback`, e
 Authorization: Bearer <token_keycloak>
 ```
 
+Com `GLICODATA_AUTH_DISABLED=true` em ambiente local, o middleware continua registrado, mas o guard `keycloak` aceita chamadas sem Bearer token para facilitar desenvolvimento.
+
 Rotas web ficam fora do prefixo `/api`:
 
 | Metodo | Rota | Descricao |
 | --- | --- | --- |
-| `GET` | `/` | Renderiza home. |
-| `GET` | `/contact` | Renderiza pagina de contato. |
-| `GET` | `/register/{id?}` | Renderiza formulario de registro. |
-| `POST` | `/login` | Redireciona para o login Keycloak da UBS. |
+| `GET` | `/` | Redireciona para `/login`. |
+| `GET` | `/login` | Renderiza login da UBS ou redireciona para o lobby. |
+| `GET` | `/auth/ubs/redirect` | Inicia login Keycloak web. |
+| `GET` | `/auth/ubs/callback` | Recebe callback web e cria sessao `auth:ubs`. |
+| `GET` | `/ubs/lobby` | Renderiza lobby operacional. |
+| `GET` | `/ubs/pacientes*` | Renderiza listagem e detalhe visual de pacientes. |
+| `GET` | `/ubs/profissionais*` | Renderiza listagem e detalhe visual de profissionais. |
+| `GET` | `/ubs/avaliacoes*` | Renderiza listagem e detalhe visual de avaliacoes. |
+| `POST` | `/ubs/logout` | Encerra sessao web da UBS. |
 
 ---
 
@@ -255,7 +272,7 @@ Laravel Framework 12.60.2
 O repositorio nao possui configuracao de deploy versionada. Um fluxo minimo para VPS com Nginx/Apache e PHP-FPM seria:
 
 ```bash
-cd /var/www/ubs-system/application
+cd /var/www/ubs-system/glicodata
 git pull
 composer install --no-dev --optimize-autoloader
 npm install
@@ -269,7 +286,7 @@ php artisan view:cache
 Garanta que o servidor web aponte para:
 
 ```text
-application/public
+glicodata/public
 ```
 
 ### Checklist Pos-deploy
@@ -288,6 +305,7 @@ curl -i https://seu-dominio.example/api
 - Usar banco persistente PostgreSQL.
 - Publicar somente em banco novo ou preparar migracao especifica para ambiente que ja executou migrations antigas.
 - Provisionar uma UBS ativa e a client role Keycloak `audit-admin` antes da manutencao do catalogo.
+- Garantir `GLICODATA_AUTH_DISABLED=false` antes de cachear configuracoes.
 - Restringir acesso e backups de `audit_events`, pois os snapshots `jsonb` podem conter dados pessoais e clinicos.
 - Regularizar e ativar UBS provisórias apenas depois da confirmacao de email, telefone e endereco.
 - Concluir testes de aceitacao/homologacao e avaliacao de seguranca/infraestrutura antes de producao, conforme PDS-UEPG.

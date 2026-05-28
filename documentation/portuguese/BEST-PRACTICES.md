@@ -67,7 +67,7 @@ O container do Laravel injeta controllers, services, repositories e models. A de
 ### Estrutura de Teste
 
 ```bash
-application/tests/
+glicodata/tests/
 ├── Feature/
 │   ├── ApiValidationTest.php
 │   └── ExampleTest.php
@@ -100,6 +100,8 @@ Os testes existentes ainda nao foram atualizados nesta etapa por decisao de plan
 
 `UbsModel` estende `Authenticatable`, oculta `password` e possui cast `password => hashed`. A API nao aceita senha em payload de UBS ou usuario: a autenticacao principal usa Keycloak/OpenID via Laravel Socialite e guard `keycloak`. No primeiro acesso de uma UBS ativa sem `keycloak_id`, o identificador e vinculado pelo email institucional e a alteracao e auditada.
 
+Para desenvolvimento visual local existe `GLICODATA_AUTH_DISABLED`. Quando ativado, o guard `keycloak` resolve uma UBS ativa do banco e as rotas web da UBS ficam temporariamente sem `auth:ubs`. Essa flag deve permanecer `false` em homologacao e producao.
+
 ### Autorizacao
 
 Policies por entidade sao registradas em `AppServiceProvider` e chamadas pelos controllers via `Gate::authorize()`. Dados operacionais permanecem no escopo da UBS autenticada; distritos sao somente leitura; cadastro de UBS e redacao/consulta global de auditorias exigem a client role Keycloak `audit-admin`.
@@ -130,6 +132,9 @@ APP_DEBUG=true
 DB_CONNECTION=pgsql
 KEYCLOAK_BASE_URL=
 KEYCLOAK_REALM=
+KEYCLOAK_WEB_REDIRECT_URI="${APP_URL}/auth/ubs/callback"
+GLICODATA_AUTH_DISABLED=false
+GLICODATA_AUTH_BYPASS_UBS_EMAIL=
 SESSION_DRIVER=database
 QUEUE_CONNECTION=database
 CACHE_STORE=database
@@ -161,6 +166,7 @@ Em producao:
 | Risco | Impacto |
 | --- | --- |
 | Dependencia de Keycloak mal configurado | Tokens nao serao validados e rotas protegidas retornarao 401. |
+| Bypass local ativado fora de desenvolvimento | Rotas web e chamadas API poderiam operar sem token institucional. |
 | Snapshots completos de auditoria em `jsonb` | CPF, endereco e informacao clinica duplicados exigem controle restrito do banco e backups. |
 | Catalogo inicial provisório | UBS com `@seed.local`, telefone/endereco pendente entram inativas ate regularizacao. |
 | Migrations consolidadas para banco novo | Bancos antigos nao devem receber este conjunto sem estrategia especifica de migracao. |
@@ -174,3 +180,4 @@ Em producao:
 3. Cobrir Form Requests, policies, soft delete, auditoria e carga inicial com testes de feature na etapa reservada.
 4. Executar homologacao e aceite formal antes de publicar dados clinicos em producao, conforme PDS-UEPG.
 5. Avaliar cache ou validacao JWT/JWKS se o endpoint `userinfo` se tornar gargalo.
+6. Garantir `GLICODATA_AUTH_DISABLED=false` em qualquer ambiente compartilhado ou institucional.

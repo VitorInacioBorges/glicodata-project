@@ -11,7 +11,7 @@ Essa escolha resolve tres necessidades centrais deste projeto:
 3. **Persistencia rastreavel**: services executam mutacoes e eventos de auditoria na mesma transacao.
 4. **Controle de acesso por UBS**: a API usa Keycloak/OpenID; a client role `audit-admin` administra cadastro institucional e auditoria global.
 
-Na interface web, a arquitetura usa **Blade templates** com um layout base, paginas simples e assets publicos. O Vite esta configurado para compilar `resources/css/app.css` e `resources/js/app.js`, enquanto algumas telas usam CSS em `public/css`.
+Na interface web, a arquitetura usa **Blade templates** com um layout base, telas da UBS e assets compilados pelo Vite. O Bootstrap e importado por npm em `resources/css/app.css` e `resources/js/app.js`, e os SVGs de navegacao ficam em `public/images`.
 
 ---
 
@@ -59,17 +59,17 @@ Na interface web, a arquitetura usa **Blade templates** com um layout base, pagi
 ```text
 ┌─────────────────────────────────────────────────────────────┐
 │                      resources/views                        │
-│  home.blade.php | register.blade.php | contact.blade.php    │
+│  ubs/auth, ubs/lobby, listagens e detalhes por entidade      │
 └──────────────────────────────┬──────────────────────────────┘
                                │
 ┌──────────────────────────────▼──────────────────────────────┐
-│                 resources/views/layouts/main.blade.php      │
-│  HTML base, Bootstrap via CDN, fonte Roboto e assets publicos│
+│                  resources/views/layouts/app.blade.php      │
+│  Layout base, navegacao UBS e aviso de bypass local         │
 └──────────────────────────────┬──────────────────────────────┘
                                │
 ┌──────────────────────────────▼──────────────────────────────┐
-│                    public/css e public/js                   │
-│  styles.css e scripts.js; register.styles.css fica em resources/css│
+│               resources/css, resources/js e public/images   │
+│  Bootstrap via Vite, CSS do produto e SVGs dos modulos      │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -116,13 +116,15 @@ Na interface web, a arquitetura usa **Blade templates** com um layout base, pagi
 8. API retorna access_token, refresh_token, expires_in e dados da UBS.
 ```
 
-### Web: Formulario de Registro
+### Web: Login e Navegacao UBS
 
 ```text
-1. Cliente acessa GET /register/{id?}.
-2. A rota renderiza resources/views/register.blade.php.
-3. O formulario envia POST para a rota nomeada web, exposta como /login.
-4. A rota redireciona para `ubs.auth.login`, usando Keycloak como fonte principal de autenticacao.
+1. Cliente acessa GET /login.
+2. A rota renderiza resources/views/ubs/auth/login.blade.php ou redireciona para /ubs/lobby se ja houver sessao.
+3. O link institucional chama GET /auth/ubs/redirect.
+4. UbsAuthController usa `KEYCLOAK_WEB_REDIRECT_URI` para autenticar no Keycloak e criar sessao `auth:ubs`.
+5. As paginas /ubs/lobby, /ubs/pacientes, /ubs/profissionais e /ubs/avaliacoes usam o layout Blade compartilhado.
+6. Em desenvolvimento local, `GLICODATA_AUTH_DISABLED=true` remove temporariamente o middleware `auth:ubs` dessas paginas.
 ```
 
 ---
@@ -186,4 +188,4 @@ Assessment 1 ── 1 Report
 Ubs      1 ── N AuditEvent
 ```
 
-Os relacionamentos acima estao declarados nos models em `application/app/Models`. As migrations consolidadas criam o schema PostgreSQL para instalacao limpa, carregam o catalogo inicial de Ponta Grossa e sao carregadas pelo `AppServiceProvider`.
+Os relacionamentos acima estao declarados nos models em `glicodata/app/Models`. As migrations consolidadas criam o schema PostgreSQL para instalacao limpa, carregam o catalogo inicial de Ponta Grossa e sao carregadas pelo `AppServiceProvider`.

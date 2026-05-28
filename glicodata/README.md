@@ -18,8 +18,20 @@ Use a documentacao principal na raiz do repositorio:
 | Rotas | `routes/web.php` para Blade e `routes/api.php` carregado com prefixo `/api` |
 | Autenticacao | Guard `keycloak` com UBS autenticada via Laravel Socialite e SocialiteProviders Keycloak |
 | Views | Blade em `resources/views` |
-| Assets | Vite, Tailwind CSS, Axios e Bootstrap CDN |
+| Assets | Vite, Bootstrap 5.3.8 via npm, Axios e CSS proprio em `resources/css/app.css` |
 | Testes | PHPUnit via `php artisan test` |
+
+## Autenticacao e Desenvolvimento Visual
+
+A autenticacao principal continua sendo Keycloak/OpenID pela conta institucional da UBS. Para trabalho local de design e chamadas de API sem token, o projeto possui um bypass temporario controlado por ambiente:
+
+```env
+KEYCLOAK_WEB_REDIRECT_URI="${APP_URL}/auth/ubs/callback"
+GLICODATA_AUTH_DISABLED=false
+GLICODATA_AUTH_BYPASS_UBS_EMAIL=
+```
+
+Use `GLICODATA_AUTH_DISABLED=true` somente em ambiente local. Nesse modo, as rotas web `/ubs/*` ficam acessiveis sem sessao e o guard `keycloak` resolve uma UBS ativa local para que policies e escopo por UBS continuem funcionando nas APIs.
 
 ## Comandos Rapidos
 

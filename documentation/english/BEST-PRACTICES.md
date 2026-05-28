@@ -66,7 +66,7 @@ Laravel's container injects controllers, services, repositories, and models. Dep
 ### Test Structure
 
 ```bash
-application/tests/
+glicodata/tests/
 ├── Feature/
 │   ├── ApiValidationTest.php
 │   └── ExampleTest.php
@@ -99,6 +99,8 @@ To cover the real API, prioritize:
 
 `UbsModel` extends `Authenticatable`, hides `password`, and has the `password => hashed` cast. The API's main authentication uses Keycloak/OpenID through Laravel Socialite and the `keycloak` guard. Local username/password login is no longer the primary source.
 
+For local visual development, `GLICODATA_AUTH_DISABLED` can be enabled. When active, the `keycloak` guard resolves one active UBS from the database and UBS web routes temporarily run without `auth:ubs`. This flag must remain `false` in staging and production.
+
 ### Authorization
 
 Entity policies are registered in `AppServiceProvider` and called by controllers through `Gate::authorize()`. They restrict listings and actions to the authenticated UBS scope, with districts in read-only mode.
@@ -127,6 +129,9 @@ APP_DEBUG=true
 DB_CONNECTION=pgsql
 KEYCLOAK_BASE_URL=
 KEYCLOAK_REALM=
+KEYCLOAK_WEB_REDIRECT_URI="${APP_URL}/auth/ubs/callback"
+GLICODATA_AUTH_DISABLED=false
+GLICODATA_AUTH_BYPASS_UBS_EMAIL=
 SESSION_DRIVER=database
 QUEUE_CONNECTION=database
 CACHE_STORE=database
@@ -155,6 +160,7 @@ In production:
 | Risk | Impact |
 | --- | --- |
 | Misconfigured Keycloak dependency | Tokens will not be validated and protected routes will return 401. |
+| Local bypass enabled outside development | Web routes and API calls could operate without an institutional token. |
 | Audit snapshots contain personal data | Database access, backups, retention, and redaction procedures must be restricted according to NTI governance. |
 | Consolidated fresh-install migrations | An existing deployed database cannot receive this schema without a dedicated transition migration plan. |
 | Provisional institutional entries | UBS records with temporary email/contact data remain inactive until verified by an administrator. |
@@ -168,3 +174,4 @@ In production:
 3. Provision and review Keycloak roles per environment, especially `audit-admin`.
 4. Update and expand feature tests in the dedicated testing stage.
 5. Evaluate caching or token introspection if the `userinfo` endpoint becomes a bottleneck.
+6. Ensure `GLICODATA_AUTH_DISABLED=false` in every shared or institutional environment.

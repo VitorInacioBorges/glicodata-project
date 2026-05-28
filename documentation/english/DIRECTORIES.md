@@ -4,7 +4,7 @@
 
 ```bash
 ubs-system/
-├── application/
+├── glicodata/
 │   ├── app/
 │   │   ├── Enums/
 │   │   ├── Http/
@@ -25,6 +25,7 @@ ubs-system/
 │   │   └── seeders/
 │   ├── public/
 │   │   ├── css/
+│   │   ├── images/
 │   │   └── js/
 │   ├── resources/
 │   │   ├── css/
@@ -48,13 +49,13 @@ ubs-system/
 └── README.md
 ```
 
-Directories ignored by `.gitignore`, such as `application/vendor/`, `application/node_modules/`, `application/.env`, caches, logs, and generated files under `storage/`, are not part of the operational documentation.
+Directories ignored by `.gitignore`, such as `glicodata/vendor/`, `glicodata/node_modules/`, `glicodata/.env`, caches, logs, and generated files under `storage/`, are not part of the operational documentation.
 
 ---
 
 ## Backend — Directory Details
 
-### `application/app/Http/Controllers/`
+### `glicodata/app/Http/Controllers/`
 
 HTTP controllers for the API. They receive validated Form Requests, apply authorization through `Gate`, inject authenticated ownership when necessary, delegate to services, and return `JsonResponse`.
 
@@ -72,11 +73,11 @@ HTTP controllers for the API. They receive validated Form Requests, apply author
 
 Operational entity controllers expose CRUD through `Route::apiResource`. District is read-only, UBS only supports read and administrative update, and audit events use read and redaction routes.
 
-### `application/app/Http/Requests/`
+### `glicodata/app/Http/Requests/`
 
 Form Requests normalize and validate incoming data before the controller calls a service. Resource requests prevent clients from supplying ownership or identity-provider fields, `PaginationRequest` caps `per_page` at 20, and `RedactAuditEventRequest` validates the audit redaction reason.
 
-### `application/app/Services/`
+### `glicodata/app/Services/`
 
 Application layer. Services are separated by entity folder and centralize UUID/email lookup checks, tenant invariants, transactions, logical deletions, and audit recording.
 
@@ -92,7 +93,7 @@ Application layer. Services are separated by entity folder and centralize UUID/e
 | `ReportServices/ReportService.php` | Report CRUD, logical deletion, and audit. |
 | `AuditEventServices/AuditEventService.php` | Scoped audit listing and audited payload redaction. |
 
-### `application/app/Repositories/`
+### `glicodata/app/Repositories/`
 
 Data access layer. Repositories are separated by entity folder, use `newQuery()` on Eloquent models, and encapsulate queries reused by services.
 
@@ -107,7 +108,7 @@ Data access layer. Repositories are separated by entity folder, use `newQuery()`
 | `ReportRepositories/ReportRepository.php` | `paginateReports`, `paginateReportsForUbs`, `findReportById`, `createReport` |
 | `AuditEventRepositories/AuditEventRepository.php` | `paginateAuditEvents`, `paginateAuditEventsForUbs`, `findAuditEventById`, `createAuditEvent` |
 
-### `application/app/Policies/`
+### `glicodata/app/Policies/`
 
 Entity policies registered in `AppServiceProvider`. They authorize the UBS authenticated by the `keycloak` guard to access only data linked to its own UBS, except districts, which are read-only.
 
@@ -122,7 +123,7 @@ Entity policies registered in `AppServiceProvider`. They authorize the UBS authe
 | `ReportPolicies/ReportPolicy.php` | Restricts reports through the assessment linked to the authenticated UBS. |
 | `AuditEventPolicies/AuditEventPolicy.php` | Restricts ordinary UBS to its own events and allows global read/redaction to `audit-admin`. |
 
-### `application/app/Models/`
+### `glicodata/app/Models/`
 
 Eloquent models with `fillable`, casts, explicit table names, and relationships.
 
@@ -137,7 +138,7 @@ Eloquent models with `fillable`, casts, explicit table names, and relationships.
 | `ReportModel.php` | `reports` | `belongsTo(AssessmentModel)` |
 | `AuditEventModel.php` | `audit_events` | `belongsTo(UbsModel)` as actor and owner |
 
-### `application/app/Enums/`
+### `glicodata/app/Enums/`
 
 Native PHP enums used as model casts.
 
@@ -146,43 +147,48 @@ Native PHP enums used as model casts.
 | `UserRole.php` | `admin`, `professional` |
 | `RiskClassification.php` | `low`, `moderate`, `high` |
 
-### `application/app/Utils/`
+### `glicodata/app/Utils/`
 
 | File | Responsibility |
 | --- | --- |
 | `ValidateUtils.php` | Trait with UUID and RFC email validation used by service lookup methods. |
 
-### `application/app/Rules/`
+### `glicodata/app/Rules/`
 
 | File | Responsibility |
 | --- | --- |
 | `CpfRules/ValidCpf.php` | Validates formatted Brazilian CPF values and verifying digits for HTTP requests. |
 
-### `application/app/Providers/`
+### `glicodata/app/Providers/`
 
 | File | Responsibility |
 | --- | --- |
-| `AppServiceProvider.php` | Registers Socialite Keycloak, the `keycloak` guard, policies, and migration loading from subdirectories. |
+| `AppServiceProvider.php` | Registers Socialite Keycloak, the `keycloak` guard, the optional local bypass, policies, and migration loading from subdirectories. |
 | `RouteServiceProvider.php` | Loads `routes/web.php` with `web` middleware and `routes/api.php` with `api` middleware and `/api` prefix. |
 
 ---
 
 ## Routes
 
-### `application/routes/web.php`
+### `glicodata/routes/web.php`
 
 Blade interface routes without the `/api` prefix.
 
 | Route | Type | Responsibility |
 | --- | --- | --- |
-| `GET /` | Web view | Renders `home.blade.php`. |
-| `GET /contact` | Web view | Renders `contact.blade.php`. |
-| `GET /register/{id?}` | Web view | Renders the registration form. |
-| `POST /login` | Web action | Redirects to the `ubs.auth.login` route, delegating login to Keycloak. |
+| `GET /` | Redirect | Redirects to `/login`. |
+| `GET /login` | Web view | Renders the UBS login page or redirects to the lobby when authenticated. |
+| `GET /auth/ubs/redirect` | Web auth | Starts institutional Keycloak login. |
+| `GET /auth/ubs/callback` | Web auth | Receives the Keycloak callback, creates the `auth:ubs` session, and redirects to the lobby. |
+| `GET /ubs/lobby` | Web view | Renders the GlicoData operational lobby. |
+| `GET /ubs/pacientes*` | Web view | Renders patient listing and demonstration detail screens. |
+| `GET /ubs/profissionais*` | Web view | Renders professional listing and demonstration detail screens. |
+| `GET /ubs/avaliacoes*` | Web view | Renders assessment listing and demonstration detail screens. |
+| `POST /ubs/logout` | Web auth | Ends the local session and redirects to Keycloak logout when configured. |
 
-### `application/routes/api.php`
+### `glicodata/routes/api.php`
 
-JSON routes loaded with the `/api` prefix. Only `GET /api/auth/ubs/login` and `GET /api/auth/ubs/callback` are open; every other API route uses `auth:keycloak`.
+JSON routes loaded with the `/api` prefix. Only `GET /api/auth/ubs/login` and `GET /api/auth/ubs/callback` are open; every other API route uses `auth:keycloak`. In local development, `GLICODATA_AUTH_DISABLED=true` makes this guard resolve a local UBS without a token.
 
 | Route | Type | Responsibility |
 | --- | --- | --- |
@@ -199,7 +205,7 @@ JSON routes loaded with the `/api` prefix. Only `GET /api/auth/ubs/login` and `G
 
 ## Database
 
-### `application/database/migrations/`
+### `glicodata/database/migrations/`
 
 | File | Created tables |
 | --- | --- |
@@ -219,13 +225,13 @@ JSON routes loaded with the `/api` prefix. Only `GET /api/auth/ubs/login` and `G
 
 Entity migrations use UUIDs, PostgreSQL integrity constraints, soft-delete columns for operational records, and are separated by entity folder. For users, `professional` represents doctors and nurses; `admin` may also be recorded as the assessment executor. User and patient address/phone fields may be `NULL` when unavailable. This consolidated schema targets a fresh database; applying it over an already-migrated production database requires a separate migration strategy.
 
-### `application/database/seeders/`
+### `glicodata/database/seeders/`
 
 | File | Responsibility |
 | --- | --- |
 | `DatabaseSeeder.php` | Creates a district, a UBS with `keycloak_id`, and an operational `professional` test profile. |
 
-### `application/database/factories/`
+### `glicodata/database/factories/`
 
 | File | Responsibility |
 | --- | --- |
@@ -235,26 +241,29 @@ Entity migrations use UUIDs, PostgreSQL integrity constraints, soft-delete colum
 
 ## Web Interface and Assets
 
-### `application/resources/views/`
+### `glicodata/resources/views/`
 
 | File | Responsibility |
 | --- | --- |
-| `layouts/main.blade.php` | Base HTML layout with Bootstrap CDN, Google Fonts Roboto, `public/css/styles.css`, and `public/js/scripts.js`. |
-| `home.blade.php` | Simple "Sistema UBS" home screen. |
-| `register.blade.php` | Registration form displaying the "Glicodata" name. |
-| `contact.blade.php` | Simple contact page. |
+| `layouts/app.blade.php` | Base layout with Vite, UBS navigation, and a visual warning when local bypass is active. |
+| `ubs/auth/login.blade.php` | Public institutional UBS access screen. |
+| `ubs/lobby.blade.php` | GlicoData lobby with shortcuts to patients, professionals, and assessments. |
+| `ubs/patients/*.blade.php` | Patient listing and visual detail screens. |
+| `ubs/professionals/*.blade.php` | Professional listing and visual detail screens. |
+| `ubs/assessments/*.blade.php` | Assessment listing and visual detail screens. |
 
-### `application/public/`
+### `glicodata/public/`
 
 | Path | Responsibility |
 | --- | --- |
 | `public/index.php` | Laravel front controller. |
+| `public/images/*.svg` | GlicoData mark and module illustrations displayed in the lobby. |
 | `public/css/styles.css` | Simple global style for font and `h1` color. |
 | `public/js/scripts.js` | Current public script with a functioning log. |
 
-### `application/resources/css` and `application/resources/js`
+### `glicodata/resources/css` and `glicodata/resources/js`
 
-Vite entry files configured in `vite.config.js`: `resources/css/app.css` and `resources/js/app.js`. The file `resources/css/register.styles.css` also exists and contains registration form styles, but the current view references `/css/register.styles.css`, a path that would point to `public/css/register.styles.css`.
+Vite entry files configured in `vite.config.js`: `resources/css/app.css` and `resources/js/app.js`. The main CSS imports Bootstrap and contains the current Blade screen styles; the JavaScript entry imports the Bootstrap bundle.
 
 ---
 
