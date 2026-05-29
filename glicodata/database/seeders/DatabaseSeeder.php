@@ -18,27 +18,36 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        $district = DistrictModel::query()->create([
-            'name' => 'Distrito Teste',
-        ]);
+        $district = DistrictModel::query()->firstOrCreate(
+            ['name' => 'Distrito Teste'],
+        );
 
-        $ubs = UbsModel::query()->create([
-            'district_id' => $district->id,
-            'name' => 'UBS Teste',
-            'bairro_ref' => 'Centro',
-            'address' => 'Rua Teste, 100',
-            'phone' => '42999999999',
-            'email' => 'ubs@example.com',
-            'keycloak_id' => 'ubs-teste-keycloak-id',
-            'is_active' => true,
-        ]);
+        $ubs = UbsModel::query()->updateOrCreate(
+            ['email' => 'ubs@example.com'],
+            [
+                'district_id' => $district->id,
+                'name' => 'UBS Teste',
+                'bairro_ref' => 'Centro',
+                'address' => 'Rua Teste, 100',
+                'phone' => '42999999999',
+                'keycloak_id' => 'ubs-teste-keycloak-id',
+                'is_active' => true,
+            ],
+        );
 
-        UserModel::factory()->create([
-            'ubs_id' => $ubs->id,
-            'name' => 'Test User',
-            'email' => 'test@example.com',
-            'cpf' => '529.982.247-25',
-            'role' => UserRole::Professional->value,
-        ]);
+        UserModel::query()->updateOrCreate(
+            ['email' => 'test@example.com'],
+            [
+                'ubs_id' => $ubs->id,
+                'name' => 'Test User',
+                'birth' => '1990-01-01',
+                'sex' => true,
+                'cpf' => '529.982.247-25',
+                'address' => 'Rua Teste, 200',
+                'phone' => '42988888888',
+                'password' => null,
+                'role' => UserRole::Professional->value,
+            ],
+        );
     }
 }
