@@ -23,6 +23,7 @@ trap restore_application EXIT
 
 composer install --no-dev --prefer-dist --no-interaction --optimize-autoloader
 npm ci
+php -r "is_file('public/hot') && unlink('public/hot');"
 npm run build
 
 php artisan migrate --force
