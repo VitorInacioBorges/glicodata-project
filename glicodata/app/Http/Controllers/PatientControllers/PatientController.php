@@ -8,14 +8,15 @@ use App\Http\Requests\PatientRequests\StorePatientRequest;
 use App\Http\Requests\PatientRequests\UpdatePatientRequest;
 use App\Models\PatientModel;
 use App\Services\PatientServices\PatientService;
+use App\Support\TenantContext;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 
 class PatientController extends Controller
 {
     public function __construct(
         protected PatientService $service,
+        protected TenantContext $tenant,
     ) {}
 
     public function index(PaginationRequest $request): JsonResponse
@@ -24,7 +25,7 @@ class PatientController extends Controller
 
         return response()->json($this->service->getPatientsForUbs(
             $request->perPage(),
-            (string) Auth::guard('keycloak')->id(),
+            $this->tenant->ubsId($request->user()),
         ));
     }
 
@@ -38,7 +39,7 @@ class PatientController extends Controller
 
     public function store(StorePatientRequest $request): JsonResponse
     {
-        $ubsId = (string) Auth::guard('keycloak')->id();
+        $ubsId = $this->tenant->ubsId($request->user());
         Gate::authorize('create', [PatientModel::class, $ubsId]);
 
         return response()->json($this->service->createPatient([
