@@ -9,8 +9,7 @@ class ReportRepository
 {
     public function __construct(
         protected ReportModel $model,
-    ) {
-    }
+    ) {}
 
     public function paginateReports(int $perPage): LengthAwarePaginator
     {
@@ -23,16 +22,20 @@ class ReportRepository
             ->whereHas('assessment', function ($query) use ($ubsId): void {
                 $query->where('ubs_id', $ubsId);
             })
+            ->with(['assessment.patient', 'assessment.user', 'assessment.risk', 'assessment.questionnaireVersion.questionnaire'])
+            ->latest()
             ->paginate($perPage);
     }
 
     public function findReportById(string $id): ?ReportModel
     {
-        return $this->model->newQuery()->find($id);
+        return $this->model->newQuery()
+            ->with(['assessment.patient', 'assessment.user', 'assessment.risk', 'assessment.questionnaireVersion.questionnaire'])
+            ->find($id);
     }
 
     /**
-     * @param array<string, mixed> $data
+     * @param  array<string, mixed>  $data
      */
     public function createReport(array $data): ReportModel
     {
