@@ -1,195 +1,86 @@
-# Arquitetura do Projeto
+# Arquitetura do GlicoData
 
-## Justificativa da Arquitetura
+## Identidades e tenant
 
-O projeto adota uma arquitetura Laravel em camadas, organizada em **Controllers**, **Services**, **Repositories** e **Eloquent Models**. Essa separacao reduz o acoplamento entre HTTP, regras de aplicacao e persistencia sem abandonar os recursos nativos do framework.
+O sistema possui duas identidades autenticáveis:
 
-Essa escolha resolve tres necessidades centrais deste projeto:
+- `UbsModel`: conta institucional, identificada por CNES, proprietária de todo fluxo clínico;
+- `AdministratorModel`: conta global, identificada por `admin_code`, autorizada a revisar UBS e auditoria institucional.
 
-1. **Organizacao por recurso**: distritos, UBS, usuarios, pacientes, avaliacoes, riscos e relatorios seguem o mesmo fluxo de controller, service, repository e model.
-2. **Contrato HTTP explicito**: Form Requests validam entrada, normalizam emails/CPF e limitam paginacao antes dos controllers.
-3. **Persistencia rastreavel**: services executam mutacoes e eventos de auditoria na mesma transacao.
-4. **Identidade individual e tenant**: a API usa Sanctum; `UbsModel` delimita a unidade, `UserModel` identifica o ator clinico e `AdministratorModel` administra cadastros institucionais sem acesso clinico.
-
-Na interface web, a arquitetura usa **Blade templates** com um layout base, telas da UBS e assets compilados pelo Vite. O Bootstrap e importado por npm em `resources/css/app.css` e `resources/js/app.js`, e os SVGs de navegacao ficam em `public/images`.
-
----
-
-## Visualizacao da Arquitetura (Backend)
+`ProfessionalModel` não é uma conta. É uma referência selecionável dentro da UBS, com `first_name`, `specialty` e `is_active`. Não usa guard, sessão, token ou senha.
 
 ```text
-┌─────────────────────────────────────────────────────────────┐
-│                         HTTP / API                          │
-│  routes/web.php e api.php -> RouteServiceProvider           │
-└──────────────────────────────┬──────────────────────────────┘
-                               │
-┌──────────────────────────────▼──────────────────────────────┐
-│                     Sanctum / Policies                      │
-│  Bearer resolve UBS/user/admin e Gates autorizam por papel  │
-└──────────────────────────────┬──────────────────────────────┘
-                               │
-┌──────────────────────────────▼──────────────────────────────┐
-│                        Controllers                          │
-│  Recebem validated(), aplicam Gate e coordenam JSON         │
-└──────────────────────────────┬──────────────────────────────┘
-                               │
-┌──────────────────────────────▼──────────────────────────────┐
-│                          Services                           │
-│  Aplicam invariantes e transacoes com auditoria             │
-└──────────────────────────────┬──────────────────────────────┘
-                               │
-┌──────────────────────────────▼──────────────────────────────┐
-│                        Repositories                         │
-│  Encapsulam consultas Eloquent e criacao de registros       │
-└──────────────────────────────┬──────────────────────────────┘
-                               │
-┌──────────────────────────────▼──────────────────────────────┐
-│                       Eloquent Models                       │
-│  Tabelas, fillable, casts e relacionamentos                 │
-└──────────────────────────────┬──────────────────────────────┘
-                               │
-┌──────────────────────────────▼──────────────────────────────┐
-│                           Banco                             │
-│  PostgreSQL como padrao; SQLite somente em testes           │
-└─────────────────────────────────────────────────────────────┘
+Administrador ── gerencia ──> UBS
+                              │
+                              ├── Profissionais
+                              ├── Pacientes
+                              └── Avaliações ──> Risco
+                                      └───────> Relatório
 ```
 
-## Visualizacao da Arquitetura (Interface Web)
+As rotas clínicas exigem `auth:ubs`, `auth.session` e `account:ubs`. O `TenantContext`, as Policies e as consultas por `ubs_id` impedem que uma UBS opere registros de outra. Administradores não acessam dados clínicos.
+
+## Camadas
 
 ```text
-┌─────────────────────────────────────────────────────────────┐
-│                      resources/views                        │
-│  ubs/auth, ubs/lobby, listagens e detalhes por entidade      │
-└──────────────────────────────┬──────────────────────────────┘
-                               │
-┌──────────────────────────────▼──────────────────────────────┐
-│                  resources/views/layouts/app.blade.php      │
-│  Layout base, navegacao UBS e sessoes Laravel seguras       │
-└──────────────────────────────┬──────────────────────────────┘
-                               │
-┌──────────────────────────────▼──────────────────────────────┐
-│               resources/css, resources/js e public/images   │
-│  Bootstrap via Vite, CSS do produto e SVGs dos modulos      │
-└─────────────────────────────────────────────────────────────┘
+routes -> middleware/guards -> Form Request -> controller/policy
+       -> service/transação -> repository/Eloquent -> PostgreSQL
+       -> API Resource ou Blade
 ```
 
----
+- Form Requests normalizam a entrada, rejeitam campos removidos e validam UUIDs/relações.
+- Controllers nunca aceitam `ubs_id` clínico do cliente; derivam o tenant da UBS autenticada.
+- Services aplicam invariantes e registram auditoria na mesma transação.
+- Repositories clínicos paginam sempre por UBS.
+- Resources JSON usam listas explícitas de campos, evitando serialização acidental do model.
 
-## Fluxo de Dados — Requisicao Tipica
+## Minimização de dados
 
-### API: Criacao de Paciente
+| Entidade | Dados persistidos relevantes |
+| --- | --- |
+| Administrador | ID interno, `admin_code`, hash de senha, status |
+| UBS | CNES, dados institucionais, hash de senha, status |
+| Profissional | UBS, primeiro nome, especialidade, status |
+| Paciente | UBS, primeiro nome, sexo, bairro, bairro normalizado, nome do logradouro |
+| Avaliação | UBS, paciente, profissional, versão, respostas estruturadas, status e datas |
+| Risco | avaliação, pontuação, percentual e classificação calculados |
+| Relatório | avaliação e descrição |
+| Auditoria | ator institucional, proprietário, assunto, ação e nomes de campos alterados |
 
-```text
-1. Cliente envia POST /api/patients com body JSON e Authorization: Bearer <token>.
-2. O guard Sanctum valida o hash e a expiracao do token e resolve o usuario individual e sua UBS ativa.
-3. Laravel roteia para PatientControllers\PatientController@store.
-4. Controller autoriza a operacao com PatientPolicy.
-5. StorePatientRequest valida CPF formatado e nascimento, normalizando endereco/telefone vazio para `null`; o controller usa `validated()`.
-6. O controller define `ubs_id` por `user.ubs_id`, sem aceitar escopo arbitrario do payload.
-7. Service cria paciente e `audit_events` dentro da mesma transacao.
-8. Eloquent persiste `birth`; a resposta serializada calcula `age`.
-9. Controller retorna JSON com status 201.
-```
+A faixa etária faz parte das respostas imutáveis de cada avaliação. Data de nascimento não é necessária. O nome do logradouro rejeita número de imóvel e complemento; o bairro normalizado permite pesquisa posterior sem duplicar identificadores.
 
-### API: Consulta por ID
+## Fluxo da avaliação
 
-```text
-1. Cliente envia GET /api/users/{id} com Authorization: Bearer <token>.
-2. UserControllers\UserController@show chama UserService::getUserById($id).
-3. ValidateUtils::validateId() exige UUID valido.
-4. UserRepository::findUserById($id) busca o registro via Eloquent.
-5. Se nao encontrar, o service lanca ModelNotFoundException.
-6. Se encontrar, o controller autoriza acesso com UserPolicy.
-7. Se autorizado, o model e serializado em JSON.
-```
+1. A UBS seleciona um paciente do próprio tenant.
+2. A busca dinâmica retorna somente profissionais ativos da mesma UBS e expõe apenas primeiro nome e especialidade.
+3. O rascunho fixa `professional_id` e a versão publicada do questionário.
+4. O servidor valida respostas estruturadas e calcula o FINDRISC; score enviado pelo cliente é ignorado.
+5. Ao concluir, respostas e risco tornam-se imutáveis.
+6. O relatório herda paciente e profissional pela avaliação e guarda somente a descrição.
 
-### API: Login por senha e emissao Sanctum
+## Auditoria
 
-```text
-1. Cliente envia POST /api/auth/login com account_type, identifier, password e device_name; identifier e CNES para UBS e email para usuario/administrador.
-2. AuthenticationService busca a identidade somente na tabela indicada por account_type.
-3. Hash::check compara a senha com o hash local e rejeita contas inativas.
-4. Sanctum grava apenas SHA-256 do token, com ability ubs/user/admin e expires_at em 24 horas.
-5. O texto do token e retornado uma unica vez; cada identidade mantem no maximo 20 tokens.
-6. Policies e EnsureAccountType separam operacoes de UBS e administrador global.
-```
+`AuditEventService` descarta os valores recebidos em estados anterior/posterior. O registro contém apenas os nomes dos campos envolvidos. Assim, respostas clínicas, descrição do relatório, nomes e outros valores não são copiados para snapshots.
 
-### Web: Login e Navegacao UBS
+## Frontend e assets
 
-```text
-1. Cliente acessa GET /login/ubs, GET /login/profissional ou GET /login/admin.
-2. As telas enviam POST /login com account_type explicito, identifier, senha e CSRF.
-3. WebAuthController usa o mesmo AuthenticationService e cria sessao no guard ubs, user ou admin.
-4. O ID da sessao e regenerado; auth.session invalida sessoes quando o hash da senha muda.
-5. Perfil institucional usa auth:ubs, area clinica usa auth:user e painel global usa auth:admin.
-6. Logout invalida a sessao e regenera o token CSRF.
-```
+Blade renderiza a interface no Laravel. `resources/css/app.css` importa Bootstrap e os estilos do produto; `resources/js/app.js` importa Bootstrap e implementa a busca de profissionais.
 
----
+- Desenvolvimento: Blade em 8000 busca assets no Vite em 5173; a CSP local libera essa origem apenas com `public/hot`.
+- Homologação/produção: Vite gera `public/build`; HTML, CSS e JS vêm da mesma origem e porta, com CSP `'self'`.
 
-## Inversao de Dependencia
-
-O projeto usa injecao de dependencia do container do Laravel por construtor:
-
-```php
-class UserController extends Controller
-{
-    public function __construct(
-        protected \App\Services\UserServices\UserService $service,
-    ) {
-    }
-}
-```
-
-Cada service recebe seu repository correspondente, e cada repository recebe o model Eloquent correspondente:
-
-```php
-class UserService
-{
-    public function __construct(
-        protected \App\Repositories\UserRepositories\UserRepository $repository,
-    ) {
-    }
-}
-```
-
-Nao ha interfaces formais para repositories neste momento. A separacao atual ainda ajuda a trocar ou especializar consultas sem mover logica para controllers, mas a substituicao por mocks exige binding manual ou doubles nos testes.
-
----
-
-## Modulos do Sistema
-
-| Modulo       | Responsabilidade                                                                                            |
-| ------------ | ----------------------------------------------------------------------------------------------------------- |
-| `District`   | Consulta do catalogo institucional fixo de distritos.                                                        |
-| `Ubs`        | Catalogo institucional e principal tenant; alteracao/ativacao somente por administrador global.             |
-| `Administrator` | Identidade global separada, autorizada para UBS e auditoria institucional.                                 |
-| `User`       | Identidade HTTP individual `professional` ou gestor `admin` da UBS, com conselho/UF/especialidade quando profissional. |
-| `Patient`    | Pacientes vinculados a UBS, com contato opcional, `birth`, idade derivada e exclusao logica.                |
-| `Questionnaire` | Questionario global com versoes imutaveis de schema e regras de risco publicadas.                         |
-| `Assessment` | Anamnese em rascunho/concluida, vinculada a versao e ao usuario individual autenticado.                     |
-| `Risk`       | Resultado calculado no servidor ao concluir a anamnese; a API oferece somente leitura.                      |
-| `Report`     | Relatorio associado a uma conclusao, com CRUD e exportacao somente agregada/anonimizada.                     |
-| `AuditEvent` | Trilha de alteracoes com snapshots e redacao registrada sob autorizacao administrativa.                     |
-
----
-
-## Relacionamentos de Dados
+## Relações
 
 ```text
 District 1 ── N Ubs
-Ubs      1 ── N User
-Ubs      1 ── N Patient
-Ubs      1 ── N Assessment
-User     1 ── N Assessment
-Patient  1 ── N Assessment
+Ubs 1 ── N Professional
+Ubs 1 ── N Patient
+Ubs 1 ── N Assessment
+Professional 1 ── N Assessment
+Patient 1 ── N Assessment
 Questionnaire 1 ── N QuestionnaireVersion
 QuestionnaireVersion 1 ── N Assessment
 Assessment 1 ── 1 Risk
 Assessment 1 ── 1 Report
-Ubs      1 ── N AuditEvent
-Administrator 1 ── N AuditEvent
-User     1 ── N AuditEvent
+Ubs/Administrator 1 ── N AuditEvent
 ```
-
-Os relacionamentos acima estao declarados nos models em `glicodata/app/Models`. As migrations consolidadas criam o schema PostgreSQL para instalacao limpa, carregam o catalogo inicial de Ponta Grossa e sao carregadas pelo `AppServiceProvider`.
