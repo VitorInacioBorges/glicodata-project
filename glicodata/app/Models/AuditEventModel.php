@@ -17,15 +17,11 @@ class AuditEventModel extends Model
     protected $fillable = [
         'actor_ubs_id',
         'actor_administrator_id',
-        'actor_user_id',
         'owner_ubs_id',
-        'actor_name',
-        'actor_email',
         'subject_type',
         'subject_id',
         'action',
-        'before_payload',
-        'after_payload',
+        'changed_fields',
         'redacted_at',
         'redacted_by_ubs_id',
         'redacted_by_administrator_id',
@@ -38,8 +34,7 @@ class AuditEventModel extends Model
     protected function casts(): array
     {
         return [
-            'before_payload' => 'array',
-            'after_payload' => 'array',
+            'changed_fields' => 'array',
             'redacted_at' => 'datetime',
         ];
     }
@@ -58,11 +53,6 @@ class AuditEventModel extends Model
     public function administratorActor(): BelongsTo
     {
         return $this->belongsTo(AdministratorModel::class, 'actor_administrator_id');
-    }
-
-    public function userActor(): BelongsTo
-    {
-        return $this->belongsTo(UserModel::class, 'actor_user_id')->withTrashed();
     }
 
     /**
