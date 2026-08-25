@@ -7,16 +7,16 @@
     <main id="conteudo" class="gd-page">
         <div class="d-flex flex-wrap align-items-end justify-content-between gap-3 mb-4">
             <div>
-                <p class="gd-eyebrow">Identidades da unidade</p>
-                <h1 class="gd-heading">Profissionais e gestores</h1>
-                <p class="gd-subtitle">Contas individuais com papel e vínculo profissional verificável.</p>
+                <p class="gd-eyebrow">Equipe da unidade</p>
+                <h1 class="gd-heading">Profissionais</h1>
+                <p class="gd-subtitle">Referências clínicas sem credencial de acesso ou dados pessoais.</p>
             </div>
-            <a class="btn btn-primary" href="{{ route('ubs.professionals.create') }}">Nova conta</a>
+            <a class="btn btn-primary" href="{{ route('ubs.professionals.create') }}">Novo profissional</a>
         </div>
 
         <section class="gd-panel" aria-label="Listagem de profissionais">
             <div class="gd-toolbar">
-                <strong>{{ $professionals->total() }} contas</strong>
+                <strong>{{ $professionals->total() }} profissionais</strong>
                 <span class="text-secondary small">Escopo da UBS autenticada</span>
             </div>
             <div class="table-responsive">
@@ -24,8 +24,6 @@
                     <thead>
                         <tr>
                             <th>Nome</th>
-                            <th>Papel</th>
-                            <th>Conselho</th>
                             <th>Especialidade</th>
                             <th>Status</th>
                             <th></th>
@@ -35,16 +33,9 @@
                         @forelse ($professionals as $professional)
                             <tr>
                                 <td data-label="Nome">
-                                    <span class="gd-table-title">{{ $professional->name }}</span>
-                                    <span class="gd-table-meta">{{ $professional->email }}</span>
+                                    <span class="gd-table-title">{{ $professional->first_name }}</span>
                                 </td>
-                                <td data-label="Papel">
-                                    {{ $professional->role->value === 'admin' ? 'Gestor da UBS' : 'Profissional' }}
-                                </td>
-                                <td data-label="Conselho">
-                                    {{ $professional->council_type?->value ? $professional->council_type->value . ' ' . $professional->council_number . '/' . $professional->council_uf : 'Não aplicável' }}
-                                </td>
-                                <td data-label="Especialidade">{{ $professional->specialty ?: 'Não aplicável' }}</td>
+                                <td data-label="Especialidade">{{ $professional->specialty }}</td>
                                 <td data-label="Status">
                                     <span class="gd-status gd-status-{{ $professional->is_active ? 'success' : 'danger' }}">
                                         {{ $professional->is_active ? 'Ativo' : 'Inativo' }}
@@ -57,8 +48,8 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="6" class="text-center text-secondary py-5">
-                                    Nenhuma conta individual cadastrada.
+                                <td colspan="4" class="text-center text-secondary py-5">
+                                    Nenhum profissional cadastrado.
                                 </td>
                             </tr>
                         @endforelse
