@@ -7,10 +7,9 @@
 | Tecnologia | Versao | Funcao |
 | --- | --- | --- |
 | **PHP** | `^8.2` no Composer; `8.3.6` observado localmente | Runtime da aplicacao Laravel. |
-| **Laravel Framework** | `^12.0`; `12.60.2` instalado | Framework MVC, roteamento, container, Eloquent, migrations e testes. |
+| **Laravel Framework** | `^12.0`; `12.67.0` instalado | Framework MVC, roteamento, container, Eloquent, migrations e testes. |
 | **Eloquent ORM** | Incluso no Laravel | Models, relacionamentos, casts, fillable e consultas. |
-| **Laravel Socialite** | `^5.27`; `5.27.0` instalado | Cliente OAuth/OpenID usado no login Keycloak da UBS. |
-| **SocialiteProviders Keycloak** | `^5.3`; `5.3.0` instalado | Provider Keycloak para Socialite. |
+| **Laravel Sanctum** | `^4.0`; `4.3.3` instalado | Tokens Bearer de UBS e administradores para a API. |
 | **PostgreSQL** | Default em `.env.example` e `config/database.php` | Banco padrao do projeto conforme PDS-UEPG. |
 | **SQLite** | Configurado em `phpunit.xml` | Banco em memoria para testes automatizados locais. |
 | **Laravel Tinker** | `^2.10.1` | REPL para inspecao e operacoes locais. |
@@ -47,7 +46,7 @@
 O backend esta dividido em quatro camadas principais:
 
 - **Controllers / Form Requests**: entrada HTTP, validacao de payload e serializacao JSON.
-- **Policies**: autorizacao por UBS autenticada via guard `keycloak`.
+- **Policies**: autorizacao pelo principal Sanctum/sessao, com isolamento por UBS e privilegios administrativos separados.
 - **Services**: regras de aplicacao, transacoes e auditoria de alteracoes.
 - **Repositories**: consultas Eloquent e criacao de registros.
 - **Models**: mapeamento de tabelas, casts, fillable e relacionamentos.
@@ -66,7 +65,7 @@ feat(audit): registra eventos das operacoes persistidas
 
 ### CRUD REST por Recurso
 
-Os recursos operacionais usam `Route::apiResource` com CRUD protegido por `auth:keycloak`. Distritos sao somente leitura e UBS permite consulta e atualizacao por perfil administrativo do Keycloak. A auditoria e acessada por rotas especificas de consulta e redacao, tambem protegidas. Em desenvolvimento local, `GLICODATA_AUTH_DISABLED=true` faz o guard resolver uma UBS local para permitir chamadas sem Bearer token.
+Os recursos operacionais usam `Route::apiResource` com CRUD protegido por `auth:sanctum`. Distritos sao somente leitura; UBS e auditoria aceitam UBS no proprio escopo e administradores globais nas operacoes institucionais. Recursos clinicos aceitam somente tokens com identidade/ability de UBS.
 
 ---
 
@@ -94,10 +93,10 @@ As views atuais sao renderizadas no servidor com Blade para login UBS, lobby, li
 | Aspecto | Implementacao |
 | --- | --- |
 | **Formato da API** | JSON para controllers REST. |
-| **Autenticacao** | `Authorization: Bearer <token>` validado contra Keycloak pelo guard `keycloak`. |
-| **Bypass local** | `GLICODATA_AUTH_DISABLED=true` libera visualizacao local e chamadas de API sem token; deve ficar desativado fora de desenvolvimento. |
+| **Autenticacao** | `Authorization: Bearer <token>` validado localmente por Laravel Sanctum; Blade usa guards de sessao. |
+| **Credenciais** | Senhas em hash Argon2id, sem descriptografia; tokens expiram em 24 horas e sao armazenados como SHA-256. |
 | **Paginacao** | Query string `?per_page=N`, com limite maximo efetivo de 20. |
 | **Validacao de payload** | Form Requests entregam somente `$request->validated()` aos controllers. |
 | **Validacao de ID** | UUID validado por `ValidateUtils::validateId()` nas buscas, updates e deletes por ID. |
-| **Validacao de email** | `ValidateUtils::validateEmail()` usada em buscas por email nos services de UBS e usuarios. |
-| **Autorizacao** | Policies restringem dados por UBS; a role de cliente Keycloak `audit-admin` gerencia UBS e auditoria global. |
+| **Identidade UBS** | CNES numerico unico de sete digitos; email permanece dado opcional do perfil. |
+| **Autorizacao** | Policies restringem dados por UBS; `AdministratorModel` gerencia UBS e auditoria global sem acesso clinico automatico. |
