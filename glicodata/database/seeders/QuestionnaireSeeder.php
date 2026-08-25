@@ -57,15 +57,15 @@ class QuestionnaireSeeder extends Seeder
         return [
             [
                 'code' => 'age',
-                'label' => 'Idade',
-                'help' => 'Calculada automaticamente a partir da data de nascimento do paciente.',
-                'type' => 'computed_age',
+                'label' => 'Faixa etária no momento da avaliação',
+                'help' => 'Informe somente a faixa etária; a data de nascimento não é armazenada.',
+                'type' => 'choice',
                 'required' => true,
-                'ranges' => [
-                    ['max' => 44, 'score' => 0],
-                    ['min' => 45, 'max' => 54, 'score' => 2],
-                    ['min' => 55, 'max' => 64, 'score' => 3],
-                    ['min' => 65, 'score' => 4],
+                'options' => [
+                    ['value' => 'under_45', 'label' => 'Menos de 45 anos', 'score' => 0],
+                    ['value' => '45_54', 'label' => '45 a 54 anos', 'score' => 2],
+                    ['value' => '55_64', 'label' => '55 a 64 anos', 'score' => 3],
+                    ['value' => '65_plus', 'label' => '65 anos ou mais', 'score' => 4],
                 ],
             ],
             [
