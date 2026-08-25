@@ -10,25 +10,22 @@ use Illuminate\Validation\Rules\Password;
 
 class CreateAdministratorCommand extends Command
 {
-    protected $signature = 'glicodata:admin-create {--name=} {--email=}';
+    protected $signature = 'glicodata:admin-create {admin_code?}';
 
-    protected $description = 'Cria uma conta administrativa global do GlicoData';
+    protected $description = 'Cria uma conta administrativa global por código e senha';
 
     public function handle(): int
     {
-        $name = trim((string) ($this->option('name') ?: $this->ask('Nome')));
-        $email = Str::lower(trim((string) ($this->option('email') ?: $this->ask('E-mail'))));
+        $adminCode = Str::upper(trim((string) ($this->argument('admin_code') ?: $this->ask('Código do administrador'))));
         $password = (string) $this->secret('Senha');
         $confirmation = (string) $this->secret('Confirme a senha');
 
         $validator = Validator::make([
-            'name' => $name,
-            'email' => $email,
+            'admin_code' => $adminCode,
             'password' => $password,
             'password_confirmation' => $confirmation,
         ], [
-            'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'email:rfc', 'max:255', 'unique:administrators,email'],
+            'admin_code' => ['required', 'string', 'max:40', 'regex:/^[A-Z0-9_-]+$/', 'unique:administrators,admin_code'],
             'password' => ['required', 'string', 'max:255', 'confirmed', Password::defaults()],
         ]);
 
@@ -41,8 +38,7 @@ class CreateAdministratorCommand extends Command
         }
 
         AdministratorModel::query()->create([
-            'name' => $name,
-            'email' => $email,
+            'admin_code' => $adminCode,
             'password' => $password,
             'is_active' => true,
         ]);
