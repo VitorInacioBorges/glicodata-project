@@ -9,7 +9,7 @@
             <div>
                 <p class="gd-eyebrow text-white-50">Unidade Básica de Saúde</p>
                 <h1 id="lobby-title">Atendimento da unidade</h1>
-                <p>Gerencie a equipe da unidade e use uma conta individual para acessar os registros clínicos.</p>
+                <p>Gerencie a equipe e os registros clínicos pela sessão institucional da unidade.</p>
             </div>
             <div class="gd-hero-unit">
                 <small>Sessão ativa</small>
@@ -27,7 +27,7 @@
         </div>
 
         <section class="gd-module-grid" aria-label="Módulos do GlicoData">
-            <a class="gd-module" href="{{ route('user.login') }}">
+            <a class="gd-module" href="{{ route('ubs.patients.index') }}">
                 <img src="{{ asset('images/module-patients.svg') }}" alt="">
                 <h2>Pacientes</h2>
                 <p>Cadastros vinculados à UBS e acompanhamento dos dados disponíveis.</p>
@@ -37,11 +37,11 @@
             <a class="gd-module" href="{{ route('ubs.professionals.index') }}">
                 <img src="{{ asset('images/module-professionals.svg') }}" alt="">
                 <h2>Profissionais</h2>
-                <p>Equipe assistencial e administração associadas à unidade.</p>
+                <p>Referências assistenciais com somente primeiro nome e especialidade.</p>
                 <span class="gd-module-action">Abrir listagem</span>
             </a>
 
-            <a class="gd-module" href="{{ route('user.login') }}">
+            <a class="gd-module" href="{{ route('ubs.assessments.index') }}">
                 <img src="{{ asset('images/module-assessments.svg') }}" alt="">
                 <h2>Avaliações recentes</h2>
                 <p>Registros clínicos vinculados ao paciente e ao profissional executor.</p>
