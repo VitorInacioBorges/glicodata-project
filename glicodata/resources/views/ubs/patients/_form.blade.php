@@ -10,45 +10,19 @@
 @endif
 
 <div class="row g-3">
-    <div class="col-md-8">
-        <label class="form-label" for="name">Nome completo</label>
+    <div class="col-md-6">
+        <label class="form-label" for="first_name">Primeiro nome</label>
         <input
             class="form-control"
-            id="name"
-            name="name"
-            value="{{ old('name', $patient->name ?? '') }}"
-            maxlength="255"
+            id="first_name"
+            name="first_name"
+            value="{{ old('first_name', $patient->first_name ?? '') }}"
+            maxlength="80"
             required
         >
     </div>
 
-    <div class="col-md-4">
-        <label class="form-label" for="cpf">CPF</label>
-        <input
-            class="form-control"
-            id="cpf"
-            name="cpf"
-            value="{{ old('cpf', $patient->cpf ?? '') }}"
-            placeholder="000.000.000-00"
-            maxlength="14"
-            required
-        >
-    </div>
-
-    <div class="col-md-4">
-        <label class="form-label" for="birth">Data de nascimento</label>
-        <input
-            class="form-control"
-            id="birth"
-            name="birth"
-            type="date"
-            value="{{ old('birth', isset($patient) ? $patient->birth->format('Y-m-d') : '') }}"
-            max="{{ now()->format('Y-m-d') }}"
-            required
-        >
-    </div>
-
-    <div class="col-md-4">
+    <div class="col-md-6">
         <label class="form-label" for="sex">Sexo</label>
         <select class="form-select" id="sex" name="sex" required>
             <option value="">Selecione</option>
@@ -57,26 +31,28 @@
         </select>
     </div>
 
-    <div class="col-md-4">
-        <label class="form-label" for="phone">Telefone</label>
+    <div class="col-md-6">
+        <label class="form-label" for="neighborhood">Bairro</label>
         <input
             class="form-control"
-            id="phone"
-            name="phone"
-            value="{{ old('phone', $patient->phone ?? '') }}"
-            maxlength="30"
+            id="neighborhood"
+            name="neighborhood"
+            value="{{ old('neighborhood', $patient->neighborhood ?? '') }}"
+            maxlength="120"
+            required
         >
     </div>
 
-    <div class="col-12">
-        <label class="form-label" for="address">Endereço</label>
+    <div class="col-md-6">
+        <label class="form-label" for="street_name">Nome do logradouro</label>
         <input
             class="form-control"
-            id="address"
-            name="address"
-            value="{{ old('address', $patient->address ?? '') }}"
-            maxlength="255"
+            id="street_name"
+            name="street_name"
+            value="{{ old('street_name', $patient->street_name ?? '') }}"
+            maxlength="160"
         >
+        <div class="form-text">Informe somente o nome da rua, sem número, complemento ou referência.</div>
     </div>
 </div>
 
