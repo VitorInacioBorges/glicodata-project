@@ -8,7 +8,6 @@ use App\Http\Requests\AuthRequests\ChangePasswordRequest;
 use App\Http\Requests\AuthRequests\LoginRequest;
 use App\Models\AdministratorModel;
 use App\Models\UbsModel;
-use App\Models\UserModel;
 use App\Services\AuthServices\AuthenticationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -17,24 +16,16 @@ use Illuminate\Validation\ValidationException;
 
 class ApiAuthController extends Controller
 {
-    public function __construct(
-        protected AuthenticationService $authenticationService,
-    ) {}
+    public function __construct(protected AuthenticationService $authenticationService) {}
 
     public function login(LoginRequest $request): JsonResponse
     {
         $data = $request->validated();
         $accountType = AccountType::from($data['account_type']);
-        $account = $this->authenticationService->authenticate(
-            $accountType,
-            $data['identifier'],
-            $data['password'],
-        );
+        $account = $this->authenticationService->authenticate($accountType, $data['identifier'], $data['password']);
 
-        if (! $account instanceof UbsModel && ! $account instanceof UserModel && ! $account instanceof AdministratorModel) {
-            throw ValidationException::withMessages([
-                'identifier' => ['As credenciais informadas são inválidas.'],
-            ]);
+        if ($account === null) {
+            throw ValidationException::withMessages(['identifier' => ['As credenciais informadas são inválidas.']]);
         }
 
         $issued = $this->authenticationService->issueToken($account, $accountType, $data['device_name']);
@@ -53,15 +44,14 @@ class ApiAuthController extends Controller
         $account = $this->authenticatedAccount($request);
 
         return response()->json([
-            'account_type' => $this->accountType($account)->value,
+            'account_type' => $account instanceof UbsModel ? AccountType::Ubs->value : AccountType::Administrator->value,
             'identity' => $this->authenticationService->identity($account),
         ]);
     }
 
     public function logout(Request $request): JsonResponse
     {
-        $account = $this->authenticatedAccount($request);
-        $account->currentAccessToken()?->delete();
+        $this->authenticatedAccount($request)->currentAccessToken()?->delete();
 
         return response()->json(null, 204);
     }
@@ -69,11 +59,8 @@ class ApiAuthController extends Controller
     public function changePassword(ChangePasswordRequest $request): JsonResponse
     {
         $account = $this->authenticatedAccount($request);
-
         if (! Hash::check((string) $request->validated('current_password'), $account->password)) {
-            throw ValidationException::withMessages([
-                'current_password' => ['A senha atual está incorreta.'],
-            ]);
+            throw ValidationException::withMessages(['current_password' => ['A senha atual está incorreta.']]);
         }
 
         $this->authenticationService->replacePassword($account, (string) $request->validated('password'));
@@ -81,21 +68,11 @@ class ApiAuthController extends Controller
         return response()->json(null, 204);
     }
 
-    private function authenticatedAccount(Request $request): UbsModel|UserModel|AdministratorModel
+    private function authenticatedAccount(Request $request): UbsModel|AdministratorModel
     {
         $account = $request->user();
-
-        abort_unless($account instanceof UbsModel || $account instanceof UserModel || $account instanceof AdministratorModel, 403);
+        abort_unless($account instanceof UbsModel || $account instanceof AdministratorModel, 403);
 
         return $account;
-    }
-
-    private function accountType(UbsModel|UserModel|AdministratorModel $account): AccountType
-    {
-        return match (true) {
-            $account instanceof UbsModel => AccountType::Ubs,
-            $account instanceof UserModel => AccountType::User,
-            default => AccountType::Administrator,
-        };
     }
 }
