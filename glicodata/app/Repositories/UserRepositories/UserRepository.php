@@ -9,8 +9,7 @@ class UserRepository
 {
     public function __construct(
         protected UserModel $model,
-    ) {
-    }
+    ) {}
 
     public function paginateUsers(int $perPage): LengthAwarePaginator
     {
@@ -21,12 +20,14 @@ class UserRepository
     {
         return $this->model->newQuery()
             ->where('ubs_id', $ubsId)
+            ->withCount('assessments')
+            ->orderBy('name')
             ->paginate($perPage);
     }
 
     public function findUserById(string $id): ?UserModel
     {
-        return $this->model->newQuery()->find($id);
+        return $this->model->newQuery()->with(['ubs', 'assessments.patient', 'assessments.risk'])->find($id);
     }
 
     public function findUserByEmail(string $email): ?UserModel
@@ -37,7 +38,7 @@ class UserRepository
     }
 
     /**
-     * @param array<string, mixed> $data
+     * @param  array<string, mixed>  $data
      */
     public function createUser(array $data): UserModel
     {
