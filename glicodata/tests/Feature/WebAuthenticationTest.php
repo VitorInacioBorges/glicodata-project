@@ -47,13 +47,13 @@ class WebAuthenticationTest extends TestCase
 
         $this->post('/login', [
             'account_type' => 'admin',
-            'identifier' => $administrator->email,
+            'identifier' => $administrator->admin_code,
             'password' => self::PASSWORD,
         ])->assertRedirect(route('admin.dashboard'));
 
         $this->assertAuthenticatedAs($administrator, 'admin');
         $this->assertGuest('ubs');
-        $this->get('/admin')->assertOk()->assertSee($administrator->name);
+        $this->get('/admin')->assertOk()->assertSee($administrator->admin_code);
     }
 
     public function test_inactive_ubs_cannot_login(): void
