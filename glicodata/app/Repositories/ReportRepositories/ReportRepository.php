@@ -11,18 +11,13 @@ class ReportRepository
         protected ReportModel $model,
     ) {}
 
-    public function paginateReports(int $perPage): LengthAwarePaginator
-    {
-        return $this->model->newQuery()->paginate($perPage);
-    }
-
     public function paginateReportsForUbs(int $perPage, string $ubsId): LengthAwarePaginator
     {
         return $this->model->newQuery()
             ->whereHas('assessment', function ($query) use ($ubsId): void {
                 $query->where('ubs_id', $ubsId);
             })
-            ->with(['assessment.patient', 'assessment.user', 'assessment.risk', 'assessment.questionnaireVersion.questionnaire'])
+            ->with(['assessment.patient', 'assessment.professional', 'assessment.risk', 'assessment.questionnaireVersion.questionnaire'])
             ->latest()
             ->paginate($perPage);
     }
@@ -30,7 +25,7 @@ class ReportRepository
     public function findReportById(string $id): ?ReportModel
     {
         return $this->model->newQuery()
-            ->with(['assessment.patient', 'assessment.user', 'assessment.risk', 'assessment.questionnaireVersion.questionnaire'])
+            ->with(['assessment.patient', 'assessment.professional', 'assessment.risk', 'assessment.questionnaireVersion.questionnaire'])
             ->find($id);
     }
 
