@@ -4,6 +4,7 @@ namespace App\Http\Controllers\DistrictControllers;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\CommonRequests\PaginationRequest;
+use App\Http\Resources\DistrictResource;
 use App\Models\DistrictModel;
 use App\Services\DistrictServices\DistrictService;
 use Illuminate\Http\JsonResponse;
@@ -19,7 +20,9 @@ class DistrictController extends Controller
     {
         Gate::authorize('viewAny', DistrictModel::class);
 
-        return response()->json($this->service->getAllDistricts($request->perPage()));
+        $collection = DistrictResource::collection($this->service->getAllDistricts($request->perPage()));
+
+        return response()->json($collection->response()->getData(true));
     }
 
     public function show(string $id): JsonResponse
@@ -27,6 +30,6 @@ class DistrictController extends Controller
         $district = $this->service->getDistrictById($id);
         Gate::authorize('view', $district);
 
-        return response()->json($district);
+        return response()->json(DistrictResource::make($district));
     }
 }
