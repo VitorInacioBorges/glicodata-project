@@ -3,29 +3,46 @@
 namespace App\Http\Requests\PatientRequests;
 
 use App\Http\Requests\Support\ApiFormRequest;
-use App\Rules\CpfRules\ValidCpf;
-use Illuminate\Validation\Rule;
+use Closure;
 
 class StorePatientRequest extends ApiFormRequest
 {
     protected function prepareForValidation(): void
     {
-        $this->normalizeStrings(['name', 'cpf']);
-        $this->normalizeNullableStrings(['address', 'phone']);
+        $this->normalizeStrings(['first_name', 'neighborhood']);
+        $this->normalizeNullableStrings(['street_name']);
     }
 
-    /**
-     * @return array<string, array<int, mixed>>
-     */
     public function rules(): array
     {
         return [
-            'name' => ['required', 'string', 'max:255'],
-            'birth' => ['required', 'date', 'before_or_equal:today'],
+            'first_name' => ['required', 'string', 'max:80', 'regex:/^[\pL][\pL\x{2019}\x{0027}-]*$/u'],
             'sex' => ['required', 'boolean'],
-            'cpf' => ['required', 'string', 'max:14', new ValidCpf, Rule::unique('patients', 'cpf')],
-            'address' => ['nullable', 'string', 'max:255'],
-            'phone' => ['nullable', 'string', 'max:30'],
+            'neighborhood' => ['required', 'string', 'max:120'],
+            'street_name' => ['nullable', 'string', 'max:160', $this->streetNameRule()],
+            ...$this->removedIdentityFields(),
         ];
+    }
+
+    /** @return array<string, array<int, string>> */
+    protected function removedIdentityFields(): array
+    {
+        return array_fill_keys(['name', 'cpf', 'birth', 'address', 'phone'], ['prohibited']);
+    }
+
+    protected function streetNameRule(): Closure
+    {
+        return static function (string $attribute, mixed $value, Closure $fail): void {
+            if (! is_string($value) || $value === '') {
+                return;
+            }
+
+            $hasExplicitNumber = preg_match('/(?:\b(?:n|n[oº°]|numero|número)\.?\s*|#)\d+/iu', $value) === 1;
+            $hasTrailingHouseNumber = preg_match('/(?:,\s*|\s+)\d+[A-Za-z]?\s*$/u', $value) === 1;
+
+            if ($hasExplicitNumber || $hasTrailingHouseNumber) {
+                $fail('Informe somente o nome da rua, sem número do imóvel ou complemento.');
+            }
+        };
     }
 }
