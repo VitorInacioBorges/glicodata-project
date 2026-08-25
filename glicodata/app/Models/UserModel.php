@@ -5,6 +5,7 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Enums\ProfessionalCouncil;
 use App\Enums\UserRole;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
@@ -14,11 +15,12 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Laravel\Sanctum\HasApiTokens;
 
 class UserModel extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, HasUuids, Notifiable, SoftDeletes;
+    use HasApiTokens, HasFactory, HasUuids, Notifiable, SoftDeletes;
 
     /**
      * The attributes that are mass assignable.
@@ -36,6 +38,11 @@ class UserModel extends Authenticatable
         'email',
         'password',
         'role',
+        'is_active',
+        'council_type',
+        'council_number',
+        'council_uf',
+        'specialty',
     ];
 
     protected $table = 'users';
@@ -70,6 +77,8 @@ class UserModel extends Authenticatable
             'sex' => 'boolean',
             'password' => 'hashed',
             'role' => UserRole::class,
+            'is_active' => 'boolean',
+            'council_type' => ProfessionalCouncil::class,
         ];
     }
 
@@ -87,6 +96,22 @@ class UserModel extends Authenticatable
     public function assessments(): HasMany
     {
         return $this->hasMany(AssessmentModel::class, 'user_id');
+    }
+
+    public function auditEvents(): HasMany
+    {
+        return $this->hasMany(AuditEventModel::class, 'actor_user_id');
+    }
+
+    public function isUnitAdministrator(): bool
+    {
+        return $this->role === UserRole::Admin;
+    }
+
+    public function hasActiveAccountContext(): bool
+    {
+        return (bool) $this->is_active
+            && $this->ubs()->where('is_active', true)->exists();
     }
 
     protected static function newFactory(): UserFactory
