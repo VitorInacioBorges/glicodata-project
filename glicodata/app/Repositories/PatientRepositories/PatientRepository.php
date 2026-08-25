@@ -11,11 +11,6 @@ class PatientRepository
         protected PatientModel $model,
     ) {}
 
-    public function paginatePatients(int $perPage): LengthAwarePaginator
-    {
-        return $this->model->newQuery()->paginate($perPage);
-    }
-
     public function paginatePatientsForUbs(int $perPage, string $ubsId): LengthAwarePaginator
     {
         return $this->model->newQuery()
@@ -27,7 +22,7 @@ class PatientRepository
 
     public function findPatientById(string $id): ?PatientModel
     {
-        return $this->model->newQuery()->with(['assessments.user', 'assessments.risk'])->find($id);
+        return $this->model->newQuery()->with(['assessments.professional', 'assessments.risk'])->find($id);
     }
 
     /**
