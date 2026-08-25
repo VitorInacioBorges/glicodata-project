@@ -1,6 +1,6 @@
 <?php
 
-// Representa o enum da propriedade CLASSIFICACAO DE RISCO (classificacao do risco de desenvolvimento de Diabetes Mellitus II) 
+// Representa o enum da propriedade CLASSIFICACAO DE RISCO (classificacao do risco de desenvolvimento de Diabetes Mellitus II)
 
 namespace App\Enums;
 
