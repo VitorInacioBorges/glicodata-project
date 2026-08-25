@@ -49,8 +49,8 @@ O container do Laravel injeta controllers, services, repositories e models. A de
 | --- | --- |
 | **Validacao de entrada** | Form Requests substituem `$request->all()`; manter novas regras HTTP nessa camada. |
 | **Formato de erro** | Padronizar respostas JSON de validacao, nao encontrado e conflito. |
-| **Autenticacao** | Manter Keycloak como fonte principal e documentar configuracao de realm/client por ambiente. |
-| **Autorizacao** | A client role Keycloak `audit-admin` governa cadastro de UBS e redacao/consulta global de auditoria. |
+| **Autenticacao** | Manter Sanctum, expiracao de 24 horas, limite de tokens e Argon2id cobertos por testes. |
+| **Autorizacao** | Administradores globais ficam separados de UBS e nao recebem acesso clinico automatico. |
 | **Transacoes** | Services gravam mutacoes e `audit_events` na mesma `DB::transaction()`. |
 
 ---
@@ -70,7 +70,9 @@ O container do Laravel injeta controllers, services, repositories e models. A de
 glicodata/tests/
 ├── Feature/
 │   ├── ApiValidationTest.php
-│   └── ExampleTest.php
+│   ├── AuthenticationTest.php
+│   ├── CredentialCommandsTest.php
+│   └── WebAuthenticationTest.php
 ├── Unit/
 │   └── ExampleTest.php
 └── TestCase.php
@@ -78,13 +80,7 @@ glicodata/tests/
 
 ### Cobertura Atual
 
-O checkout atual possui testes de exemplo:
-
-- `GET /` deve retornar status 200.
-- Validacoes basicas de API existem no checkout, mas precisam ser revisadas para Form Requests, `birth`, delete logico, auditoria e o guard `keycloak`.
-- Um teste unitario simples garante que `true` e verdadeiro.
-
-Os testes existentes ainda nao foram atualizados nesta etapa por decisao de planejamento. Para a fase de testes e homologacao NTI, priorize:
+O checkout cobre login API/web, expiracao, rate limit, limite de 20 tokens, revogacao, separacao UBS/admin, BOLA basico, comandos de credencial e validacoes de API. Para ampliar a homologacao, priorize:
 
 1. Feature tests dos CRUDs por recurso.
 2. Testes de validacao para UUID invalido e email invalido.
@@ -98,13 +94,11 @@ Os testes existentes ainda nao foram atualizados nesta etapa por decisao de plan
 
 ### Autenticacao
 
-`UbsModel` estende `Authenticatable`, oculta `password` e possui cast `password => hashed`. A API nao aceita senha em payload de UBS ou usuario: a autenticacao principal usa Keycloak/OpenID via Laravel Socialite e guard `keycloak`. No primeiro acesso de uma UBS ativa sem `keycloak_id`, o identificador e vinculado pelo email institucional e a alteracao e auditada.
-
-Para desenvolvimento visual local existe `GLICODATA_AUTH_DISABLED`. Quando ativado, o guard `keycloak` resolve uma UBS ativa do banco e as rotas web da UBS ficam temporariamente sem `auth:ubs`. Essa flag deve permanecer `false` em homologacao e producao.
+`UbsModel` e `AdministratorModel` estendem `Authenticatable`, ocultam `password`, usam cast `hashed` e `HasApiTokens`. Senhas sao comparadas por `Hash::check` e nunca descriptografadas. A API usa Sanctum Bearer; Blade usa guards de sessao separados. Nao existe bypass de autenticacao.
 
 ### Autorizacao
 
-Policies por entidade sao registradas em `AppServiceProvider` e chamadas pelos controllers via `Gate::authorize()`. Dados operacionais permanecem no escopo da UBS autenticada; distritos sao somente leitura; cadastro de UBS e redacao/consulta global de auditorias exigem a client role Keycloak `audit-admin`.
+Policies por entidade sao registradas em `AppServiceProvider` e chamadas pelos controllers via `Gate::authorize()`. Dados operacionais permanecem no escopo da UBS autenticada; distritos sao somente leitura; cadastro de UBS e redacao/consulta global de auditorias exigem `AdministratorModel` ativo.
 
 ### Validacao e Sanitizacao
 
@@ -119,7 +113,7 @@ Policies por entidade sao registradas em `AppServiceProvider` e chamadas pelos c
 | **Papel profissional** | `UserRole::Professional` identifica medicos e enfermeiros; `admin` tambem pode ser o executor associado a uma avaliacao. |
 | **Mass assignment** | Models usam `fillable`, reduzindo exposicao de campos nao permitidos. |
 | **Senha** | `UserModel` e `UbsModel` ocultam `password` e aplicam cast `hashed`. |
-| **Token Bearer** | `KeycloakUbsAuthService` consulta o endpoint `userinfo` do Keycloak para resolver a UBS ativa. |
+| **Token Bearer** | Sanctum armazena SHA-256, aplica abilities, expiracao de 24 horas e limite de 20 por conta. |
 | **CSRF** | Formulario Blade usa `@csrf`. |
 
 ### Variaveis de Ambiente
@@ -130,12 +124,12 @@ Policies por entidade sao registradas em `AppServiceProvider` e chamadas pelos c
 APP_ENV=local
 APP_DEBUG=true
 DB_CONNECTION=pgsql
-KEYCLOAK_BASE_URL=
-KEYCLOAK_REALM=
-KEYCLOAK_WEB_REDIRECT_URI="${APP_URL}/auth/ubs/callback"
-GLICODATA_AUTH_DISABLED=false
-GLICODATA_AUTH_BYPASS_UBS_EMAIL=
+HASH_DRIVER=argon2id
+HASH_VERIFY=false
+SANCTUM_EXPIRATION=1440
+SANCTUM_TOKEN_PREFIX=glicodata_
 SESSION_DRIVER=database
+SESSION_ENCRYPT=true
 QUEUE_CONNECTION=database
 CACHE_STORE=database
 ```
@@ -165,11 +159,10 @@ Em producao:
 
 | Risco | Impacto |
 | --- | --- |
-| Dependencia de Keycloak mal configurado | Tokens nao serao validados e rotas protegidas retornarao 401. |
-| Bypass local ativado fora de desenvolvimento | Rotas web e chamadas API poderiam operar sem token institucional. |
+| Reivindicacao publica de CNES sem revisao | Um atacante poderia reivindicar um CNES real; por isso a conta permanece inativa ate aprovacao administrativa. |
+| Scheduler nao executado | Tokens expirados deixam de autenticar, mas linhas antigas se acumulam ate a limpeza. |
 | Snapshots completos de auditoria em `jsonb` | CPF, endereco e informacao clinica duplicados exigem controle restrito do banco e backups. |
-| Catalogo inicial provisório | UBS com `@seed.local`, telefone/endereco pendente entram inativas ate regularizacao. |
-| Migrations consolidadas para banco novo | Bancos antigos nao devem receber este conjunto sem estrategia especifica de migracao. |
+| Limpeza legada irreversivel | A remocao do catalogo apaga dados clinicos/auditoria vinculados e exige backup PostgreSQL validado. |
 
 ---
 
@@ -179,5 +172,5 @@ Em producao:
 2. Definir retencao/expurgo de `audit_events` e controles de backup com seguranca/infraestrutura do NTI.
 3. Cobrir Form Requests, policies, soft delete, auditoria e carga inicial com testes de feature na etapa reservada.
 4. Executar homologacao e aceite formal antes de publicar dados clinicos em producao, conforme PDS-UEPG.
-5. Avaliar cache ou validacao JWT/JWKS se o endpoint `userinfo` se tornar gargalo.
-6. Garantir `GLICODATA_AUTH_DISABLED=false` em qualquer ambiente compartilhado ou institucional.
+5. Executar `sanctum:prune-expired --hours=24` diariamente pelo scheduler.
+6. Ativar `HASH_VERIFY=true` depois que todos os hashes legados tiverem sido regravados como Argon2id.
