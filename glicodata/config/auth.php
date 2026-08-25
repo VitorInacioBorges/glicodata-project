@@ -44,9 +44,13 @@ return [
             'driver' => 'session',
             'provider' => 'ubs',
         ],
-        'keycloak' => [
-            'driver' => 'keycloak',
-            'provider' => 'ubs',
+        'user' => [
+            'driver' => 'session',
+            'provider' => 'users',
+        ],
+        'admin' => [
+            'driver' => 'session',
+            'provider' => 'administrators',
         ],
     ],
 
@@ -75,6 +79,10 @@ return [
         'ubs' => [
             'driver' => 'eloquent',
             'model' => App\Models\UbsModel::class,
+        ],
+        'administrators' => [
+            'driver' => 'eloquent',
+            'model' => App\Models\AdministratorModel::class,
         ],
 
         // 'users' => [
