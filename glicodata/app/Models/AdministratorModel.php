@@ -14,17 +14,9 @@ class AdministratorModel extends Authenticatable
 
     protected $table = 'administrators';
 
-    protected $fillable = [
-        'name',
-        'email',
-        'password',
-        'is_active',
-    ];
+    protected $fillable = ['admin_code', 'password', 'is_active'];
 
-    protected $hidden = [
-        'password',
-        'remember_token',
-    ];
+    protected $hidden = ['password'];
 
     protected function casts(): array
     {
