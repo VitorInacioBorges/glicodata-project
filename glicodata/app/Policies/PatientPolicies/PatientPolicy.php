@@ -3,42 +3,37 @@
 namespace App\Policies\PatientPolicies;
 
 use App\Models\PatientModel;
-use App\Models\UserModel;
+use App\Models\UbsModel;
 
 class PatientPolicy
 {
-    public function viewAny(UserModel $user): bool
+    public function viewAny(UbsModel $ubs): bool
     {
-        return $this->isActive($user);
+        return (bool) $ubs->is_active;
     }
 
-    public function view(UserModel $user, PatientModel $patient): bool
+    public function view(UbsModel $ubs, PatientModel $patient): bool
     {
-        return $this->ownsRecord($user, $patient->ubs_id);
+        return $this->owns($ubs, $patient->ubs_id);
     }
 
-    public function create(UserModel $user, mixed $ubsId = null): bool
+    public function create(UbsModel $ubs, mixed $ubsId = null): bool
     {
-        return $this->ownsRecord($user, is_string($ubsId) ? $ubsId : null);
+        return $this->owns($ubs, is_string($ubsId) ? $ubsId : null);
     }
 
-    public function update(UserModel $user, PatientModel $patient): bool
+    public function update(UbsModel $ubs, PatientModel $patient): bool
     {
-        return $this->ownsRecord($user, $patient->ubs_id);
+        return $this->view($ubs, $patient);
     }
 
-    public function delete(UserModel $user, PatientModel $patient): bool
+    public function delete(UbsModel $ubs, PatientModel $patient): bool
     {
-        return $this->ownsRecord($user, $patient->ubs_id);
+        return $this->view($ubs, $patient);
     }
 
-    private function ownsRecord(UserModel $user, ?string $ubsId): bool
+    private function owns(UbsModel $ubs, ?string $ownerId): bool
     {
-        return $this->isActive($user) && $ubsId !== null && hash_equals((string) $user->ubs_id, $ubsId);
-    }
-
-    private function isActive(UserModel $user): bool
-    {
-        return $user->hasActiveAccountContext();
+        return (bool) $ubs->is_active && $ownerId === (string) $ubs->id;
     }
 }
