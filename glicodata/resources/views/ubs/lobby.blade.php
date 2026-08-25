@@ -9,12 +9,12 @@
             <div>
                 <p class="gd-eyebrow text-white-50">Unidade Básica de Saúde</p>
                 <h1 id="lobby-title">Atendimento da unidade</h1>
-                <p>Área de trabalho para acompanhamento dos registros assistenciais da UBS autenticada.</p>
+                <p>Gerencie a equipe da unidade e use uma conta individual para acessar os registros clínicos.</p>
             </div>
             <div class="gd-hero-unit">
                 <small>Sessão ativa</small>
                 <strong>{{ auth('ubs')->user()?->name ?? 'Unidade autenticada' }}</strong>
-                <div class="small text-white-50 mt-1">Acesso institucional Keycloak</div>
+                <div class="small text-white-50 mt-1">Autenticação local segura</div>
             </div>
         </section>
 
@@ -23,11 +23,11 @@
                 <p class="gd-eyebrow">Módulos</p>
                 <h2 class="gd-heading mb-0">Visão da unidade</h2>
             </div>
-            <span class="gd-demo-note">Dados demonstrativos para validação visual</span>
+            <span class="gd-demo-note">Dados persistidos no PostgreSQL</span>
         </div>
 
         <section class="gd-module-grid" aria-label="Módulos do GlicoData">
-            <a class="gd-module" href="{{ route('ubs.patients.index') }}">
+            <a class="gd-module" href="{{ route('user.login') }}">
                 <img src="{{ asset('images/module-patients.svg') }}" alt="">
                 <h2>Pacientes</h2>
                 <p>Cadastros vinculados à UBS e acompanhamento dos dados disponíveis.</p>
@@ -41,7 +41,7 @@
                 <span class="gd-module-action">Abrir listagem</span>
             </a>
 
-            <a class="gd-module" href="{{ route('ubs.assessments.index') }}">
+            <a class="gd-module" href="{{ route('user.login') }}">
                 <img src="{{ asset('images/module-assessments.svg') }}" alt="">
                 <h2>Avaliações recentes</h2>
                 <p>Registros clínicos vinculados ao paciente e ao profissional executor.</p>
