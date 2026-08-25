@@ -5,8 +5,8 @@ namespace App\Services\AssessmentServices;
 use App\Enums\AssessmentStatus;
 use App\Models\AssessmentModel;
 use App\Models\PatientModel;
+use App\Models\ProfessionalModel;
 use App\Models\RiskModel;
-use App\Models\UserModel;
 use App\Repositories\AssessmentRepositories\AssessmentRepository;
 use App\Services\AuditEventServices\AuditEventService;
 use App\Services\QuestionnaireServices\QuestionnaireAnswerValidator;
@@ -30,11 +30,6 @@ class AssessmentService
         protected QuestionnaireAnswerValidator $answerValidator,
         protected RiskCalculator $riskCalculator,
     ) {}
-
-    public function getAllAssessments(int $perPage): LengthAwarePaginator
-    {
-        return $this->repository->paginateAssessments($this->normalizePerPage($perPage));
-    }
 
     public function getAssessmentsForUbs(int $perPage, string $ubsId): LengthAwarePaginator
     {
@@ -68,10 +63,9 @@ class AssessmentService
         return DB::transaction(function () use ($data, $version, $answers): AssessmentModel {
             $assessment = $this->repository->createAssessment([
                 'patient_id' => $data['patient_id'],
-                'user_id' => $data['user_id'],
+                'professional_id' => $data['professional_id'],
                 'ubs_id' => $data['ubs_id'],
                 'questionnaire_version_id' => $version->id,
-                'symptoms' => $data['symptoms'] ?? '',
                 'answers' => $answers,
                 'status' => AssessmentStatus::Draft,
                 'started_at' => now(),
@@ -90,7 +84,7 @@ class AssessmentService
         $assessment = $this->getAssessmentById($id);
         $this->ensureDraft($assessment);
 
-        $candidate = array_merge($assessment->only(['patient_id', 'user_id']), $data);
+        $candidate = array_merge($assessment->only(['patient_id', 'professional_id']), $data);
         $this->ensureAssessmentRelationsBelongToUbs($candidate, (string) $assessment->ubs_id);
         $patient = PatientModel::query()->findOrFail((string) $candidate['patient_id']);
         $version = $assessment->questionnaireVersion()->firstOrFail();
@@ -126,7 +120,6 @@ class AssessmentService
             );
             $before = $assessment->toArray();
             $assessment->fill([
-                'symptoms' => $data['symptoms'] ?? '',
                 'answers' => $calculation['answers'],
                 'status' => AssessmentStatus::Completed,
                 'completed_at' => now(),
@@ -210,13 +203,13 @@ class AssessmentService
             ->whereKey((string) $data['patient_id'])
             ->where('ubs_id', $ubsId)
             ->exists();
-        $userBelongs = UserModel::query()
-            ->whereKey((string) $data['user_id'])
+        $professionalBelongs = ProfessionalModel::query()
+            ->whereKey((string) $data['professional_id'])
             ->where('ubs_id', $ubsId)
             ->where('is_active', true)
             ->exists();
 
-        if (! $patientBelongs || ! $userBelongs) {
+        if (! $patientBelongs || ! $professionalBelongs) {
             throw ValidationException::withMessages([
                 'assessment' => ['Paciente e profissional devem pertencer à UBS autenticada e estar ativos.'],
             ]);
