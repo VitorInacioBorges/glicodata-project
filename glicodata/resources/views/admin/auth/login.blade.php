@@ -29,7 +29,7 @@
                 <section class="gd-login-form">
                     <p class="gd-eyebrow">Administrador autorizado</p>
                     <h2>Acessar a administração</h2>
-                    <p class="text-secondary mt-2 mb-4">Informe as credenciais administrativas do GlicoData.</p>
+                    <p class="text-secondary mt-2 mb-4">Informe o ID administrativo e a senha.</p>
 
                     @if (session('status'))
                         <div class="alert alert-success mb-4" role="status">{{ session('status') }}</div>
@@ -44,8 +44,8 @@
                         <input type="hidden" name="account_type" value="admin">
 
                         <div class="mb-3">
-                            <label class="form-label" for="identifier">E-mail</label>
-                            <input class="form-control" id="identifier" name="identifier" type="email"
+                            <label class="form-label" for="identifier">ID de administrador</label>
+                            <input class="form-control" id="identifier" name="identifier" type="text"
                                 value="{{ old('identifier') }}" autocomplete="username" required autofocus>
                         </div>
 
