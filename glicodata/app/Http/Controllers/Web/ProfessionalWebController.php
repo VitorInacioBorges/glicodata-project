@@ -3,11 +3,12 @@
 namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\UserRequests\StoreUserRequest;
-use App\Http\Requests\UserRequests\UpdateUserRequest;
-use App\Models\UserModel;
-use App\Services\UserServices\UserService;
+use App\Http\Requests\ProfessionalRequests\StoreProfessionalRequest;
+use App\Http\Requests\ProfessionalRequests\UpdateProfessionalRequest;
+use App\Models\ProfessionalModel;
+use App\Services\ProfessionalServices\ProfessionalService;
 use App\Support\TenantContext;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -16,38 +17,57 @@ use Illuminate\View\View;
 class ProfessionalWebController extends Controller
 {
     public function __construct(
-        private readonly UserService $service,
+        private readonly ProfessionalService $service,
         private readonly TenantContext $tenant,
     ) {}
 
     public function index(Request $request): View
     {
-        Gate::authorize('viewAny', UserModel::class);
+        Gate::authorize('viewAny', ProfessionalModel::class);
 
         return view('ubs.professionals.index', [
-            'professionals' => $this->service->getUsersForUbs(20, $this->tenant->ubsId($request->user())),
+            'professionals' => $this->service->getForUbs(
+                20,
+                $this->tenant->ubsId($request->user()),
+                trim((string) $request->query('search')),
+            ),
         ]);
+    }
+
+    public function search(Request $request): JsonResponse
+    {
+        Gate::authorize('viewAny', ProfessionalModel::class);
+        $professionals = $this->service->searchActive(
+            $this->tenant->ubsId($request->user()),
+            mb_substr(trim((string) $request->query('q')), 0, 80),
+        );
+
+        return response()->json(['data' => $professionals->map(fn (ProfessionalModel $professional): array => [
+            'id' => (string) $professional->id,
+            'first_name' => $professional->first_name,
+            'specialty' => $professional->specialty,
+        ])->all()]);
     }
 
     public function create(Request $request): View
     {
-        Gate::authorize('create', [UserModel::class, $this->tenant->ubsId($request->user())]);
+        Gate::authorize('create', [ProfessionalModel::class, $this->tenant->ubsId($request->user())]);
 
         return view('ubs.professionals.create');
     }
 
-    public function store(StoreUserRequest $request): RedirectResponse
+    public function store(StoreProfessionalRequest $request): RedirectResponse
     {
         $ubsId = $this->tenant->ubsId($request->user());
-        Gate::authorize('create', [UserModel::class, $ubsId]);
-        $professional = $this->service->createUser([...$request->validated(), 'ubs_id' => $ubsId]);
+        Gate::authorize('create', [ProfessionalModel::class, $ubsId]);
+        $professional = $this->service->create([...$request->validated(), 'ubs_id' => $ubsId]);
 
-        return redirect()->route('ubs.professionals.show', $professional)->with('status', 'Conta individual criada com sucesso.');
+        return redirect()->route('ubs.professionals.show', $professional)->with('status', 'Profissional criado com sucesso.');
     }
 
     public function show(string $id): View
     {
-        $professional = $this->service->getUserById($id);
+        $professional = $this->service->getById($id);
         Gate::authorize('view', $professional);
 
         return view('ubs.professionals.show', compact('professional'));
@@ -55,25 +75,25 @@ class ProfessionalWebController extends Controller
 
     public function edit(string $id): View
     {
-        $professional = $this->service->getUserById($id);
+        $professional = $this->service->getById($id);
         Gate::authorize('update', $professional);
 
         return view('ubs.professionals.edit', compact('professional'));
     }
 
-    public function update(UpdateUserRequest $request, string $id): RedirectResponse
+    public function update(UpdateProfessionalRequest $request, string $id): RedirectResponse
     {
-        Gate::authorize('update', $this->service->getUserById($id));
-        $professional = $this->service->updateUser($id, $request->validated());
+        Gate::authorize('update', $this->service->getById($id));
+        $professional = $this->service->update($id, $request->validated());
 
-        return redirect()->route('ubs.professionals.show', $professional)->with('status', 'Conta individual atualizada com sucesso.');
+        return redirect()->route('ubs.professionals.show', $professional)->with('status', 'Profissional atualizado com sucesso.');
     }
 
     public function destroy(string $id): RedirectResponse
     {
-        Gate::authorize('delete', $this->service->getUserById($id));
-        $this->service->deleteUser($id);
+        Gate::authorize('delete', $this->service->getById($id));
+        $this->service->delete($id);
 
-        return redirect()->route('ubs.professionals.index')->with('status', 'Conta individual removida com sucesso.');
+        return redirect()->route('ubs.professionals.index')->with('status', 'Profissional removido com sucesso.');
     }
 }
