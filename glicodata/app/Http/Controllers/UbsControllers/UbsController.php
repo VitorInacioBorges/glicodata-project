@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\CommonRequests\PaginationRequest;
 use App\Http\Requests\UbsRequests\StoreUbsRequest;
 use App\Http\Requests\UbsRequests\UpdateUbsRequest;
+use App\Http\Resources\UbsResource;
 use App\Models\AdministratorModel;
 use App\Models\UbsModel;
 use App\Services\UbsServices\UbsService;
@@ -25,9 +26,11 @@ class UbsController extends Controller
         $account = $request->user();
         abort_unless($account instanceof UbsModel || $account instanceof AdministratorModel, 403);
 
-        return response()->json($account instanceof AdministratorModel
+        $collection = UbsResource::collection($account instanceof AdministratorModel
             ? $this->service->getAllUbs($request->perPage())
             : $this->service->getAuthenticatedUbs($request->perPage(), (string) $account->id));
+
+        return response()->json($collection->response()->getData(true));
     }
 
     public function show(string $id): JsonResponse
@@ -35,7 +38,7 @@ class UbsController extends Controller
         $ubs = $this->service->getUbsById($id);
         Gate::authorize('view', $ubs);
 
-        return response()->json($ubs);
+        return response()->json(UbsResource::make($ubs));
     }
 
     public function store(StoreUbsRequest $request): JsonResponse
@@ -45,7 +48,7 @@ class UbsController extends Controller
         abort_unless($administrator instanceof AdministratorModel, 403);
 
         return response()->json(
-            $this->service->createUbs($request->validated(), $administrator),
+            UbsResource::make($this->service->createUbs($request->validated(), $administrator)),
             201,
         );
     }
@@ -54,6 +57,6 @@ class UbsController extends Controller
     {
         Gate::authorize('update', $this->service->getUbsById($id));
 
-        return response()->json($this->service->updateUbs($id, $request->validated()));
+        return response()->json(UbsResource::make($this->service->updateUbs($id, $request->validated())));
     }
 }
