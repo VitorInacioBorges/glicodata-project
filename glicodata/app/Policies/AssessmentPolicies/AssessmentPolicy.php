@@ -3,42 +3,47 @@
 namespace App\Policies\AssessmentPolicies;
 
 use App\Models\AssessmentModel;
-use App\Models\UbsModel;
+use App\Models\UserModel;
 
 class AssessmentPolicy
 {
-    public function viewAny(UbsModel $ubs): bool
+    public function viewAny(UserModel $user): bool
     {
-        return $this->isActive($ubs);
+        return $this->isActive($user);
     }
 
-    public function view(UbsModel $ubs, AssessmentModel $assessment): bool
+    public function view(UserModel $user, AssessmentModel $assessment): bool
     {
-        return $this->ownsRecord($ubs, $assessment->ubs_id);
+        return $this->ownsRecord($user, $assessment->ubs_id);
     }
 
-    public function create(UbsModel $ubs, mixed $ubsId = null): bool
+    public function create(UserModel $user, mixed $ubsId = null): bool
     {
-        return $this->ownsRecord($ubs, is_string($ubsId) ? $ubsId : null);
+        return $this->ownsRecord($user, is_string($ubsId) ? $ubsId : null);
     }
 
-    public function update(UbsModel $ubs, AssessmentModel $assessment): bool
+    public function update(UserModel $user, AssessmentModel $assessment): bool
     {
-        return $this->ownsRecord($ubs, $assessment->ubs_id);
+        return $this->ownsRecord($user, $assessment->ubs_id);
     }
 
-    public function delete(UbsModel $ubs, AssessmentModel $assessment): bool
+    public function delete(UserModel $user, AssessmentModel $assessment): bool
     {
-        return $this->ownsRecord($ubs, $assessment->ubs_id);
+        return $this->ownsRecord($user, $assessment->ubs_id);
     }
 
-    private function ownsRecord(UbsModel $ubs, ?string $ubsId): bool
+    public function complete(UserModel $user, AssessmentModel $assessment): bool
     {
-        return $this->isActive($ubs) && $ubsId !== null && hash_equals((string) $ubs->id, $ubsId);
+        return $this->ownsRecord($user, $assessment->ubs_id);
     }
 
-    private function isActive(UbsModel $ubs): bool
+    private function ownsRecord(UserModel $user, ?string $ubsId): bool
     {
-        return (bool) $ubs->is_active;
+        return $this->isActive($user) && $ubsId !== null && hash_equals((string) $user->ubs_id, $ubsId);
+    }
+
+    private function isActive(UserModel $user): bool
+    {
+        return $user->hasActiveAccountContext();
     }
 }
