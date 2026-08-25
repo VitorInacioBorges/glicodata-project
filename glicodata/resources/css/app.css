@@ -203,6 +203,24 @@ body {
     box-shadow: var(--gd-shadow);
 }
 
+.gd-form-panel {
+    padding: 1.5rem;
+}
+
+.gd-flash {
+    max-width: 82rem;
+}
+
+.gd-question {
+    border: 0;
+    border-bottom: 1px solid var(--gd-border);
+    padding: 0 0 1.4rem;
+}
+
+.gd-preserve-lines {
+    white-space: pre-wrap;
+}
+
 .gd-login-page {
     align-items: center;
     background: #eef4f3;
@@ -346,7 +364,9 @@ body {
     min-height: 17.25rem;
     padding: 1.5rem;
     text-decoration: none;
-    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    transition:
+        border-color 0.15s ease,
+        box-shadow 0.15s ease;
 }
 
 .gd-module:hover,
