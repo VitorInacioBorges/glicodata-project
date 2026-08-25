@@ -4,49 +4,54 @@ namespace App\Policies\ReportPolicies;
 
 use App\Models\AssessmentModel;
 use App\Models\ReportModel;
-use App\Models\UbsModel;
+use App\Models\UserModel;
 
 class ReportPolicy
 {
-    public function viewAny(UbsModel $ubs): bool
+    public function viewAny(UserModel $user): bool
     {
-        return $this->isActive($ubs);
+        return $this->isActive($user);
     }
 
-    public function view(UbsModel $ubs, ReportModel $report): bool
+    public function view(UserModel $user, ReportModel $report): bool
     {
-        return $this->assessmentBelongsToUbs($ubs, $report->assessment_id);
+        return $this->assessmentBelongsToUbs($user, $report->assessment_id);
     }
 
-    public function create(UbsModel $ubs, mixed $assessmentId = null): bool
+    public function create(UserModel $user, mixed $assessmentId = null): bool
     {
-        return $this->assessmentBelongsToUbs($ubs, is_string($assessmentId) ? $assessmentId : null);
+        return $this->assessmentBelongsToUbs($user, is_string($assessmentId) ? $assessmentId : null);
     }
 
-    public function update(UbsModel $ubs, ReportModel $report): bool
+    public function update(UserModel $user, ReportModel $report): bool
     {
-        return $this->assessmentBelongsToUbs($ubs, $report->assessment_id);
+        return $this->assessmentBelongsToUbs($user, $report->assessment_id);
     }
 
-    public function delete(UbsModel $ubs, ReportModel $report): bool
+    public function delete(UserModel $user, ReportModel $report): bool
     {
-        return $this->assessmentBelongsToUbs($ubs, $report->assessment_id);
+        return $this->assessmentBelongsToUbs($user, $report->assessment_id);
     }
 
-    private function assessmentBelongsToUbs(UbsModel $ubs, ?string $assessmentId): bool
+    public function export(UserModel $user): bool
     {
-        if (! $this->isActive($ubs) || $assessmentId === null) {
+        return $this->isActive($user);
+    }
+
+    private function assessmentBelongsToUbs(UserModel $user, ?string $assessmentId): bool
+    {
+        if (! $this->isActive($user) || $assessmentId === null) {
             return false;
         }
 
         return AssessmentModel::query()
             ->whereKey($assessmentId)
-            ->where('ubs_id', $ubs->id)
+            ->where('ubs_id', $user->ubs_id)
             ->exists();
     }
 
-    private function isActive(UbsModel $ubs): bool
+    private function isActive(UserModel $user): bool
     {
-        return (bool) $ubs->is_active;
+        return $user->hasActiveAccountContext();
     }
 }
