@@ -11,11 +11,6 @@ class RiskRepository
         protected RiskModel $model,
     ) {}
 
-    public function paginateRisks(int $perPage): LengthAwarePaginator
-    {
-        return $this->model->newQuery()->paginate($perPage);
-    }
-
     public function paginateRisksForUbs(int $perPage, string $ubsId): LengthAwarePaginator
     {
         return $this->model->newQuery()
@@ -30,13 +25,5 @@ class RiskRepository
     public function findRiskById(string $id): ?RiskModel
     {
         return $this->model->newQuery()->with(['assessment.patient'])->find($id);
-    }
-
-    /**
-     * @param  array<string, mixed>  $data
-     */
-    public function createRisk(array $data): RiskModel
-    {
-        return $this->model->newQuery()->create($data);
     }
 }
