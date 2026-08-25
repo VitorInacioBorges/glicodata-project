@@ -2,18 +2,19 @@
 
 namespace App\Policies\QuestionnairePolicies;
 
+use App\Enums\QuestionnaireVersionStatus;
 use App\Models\QuestionnaireVersionModel;
-use App\Models\UserModel;
+use App\Models\UbsModel;
 
 class QuestionnaireVersionPolicy
 {
-    public function viewAny(UserModel $user): bool
+    public function viewAny(UbsModel $ubs): bool
     {
-        return $user->hasActiveAccountContext();
+        return (bool) $ubs->is_active;
     }
 
-    public function view(UserModel $user, QuestionnaireVersionModel $version): bool
+    public function view(UbsModel $ubs, QuestionnaireVersionModel $version): bool
     {
-        return $this->viewAny($user);
+        return (bool) $ubs->is_active && $version->status === QuestionnaireVersionStatus::Published;
     }
 }
