@@ -8,14 +8,15 @@ use App\Http\Requests\UserRequests\StoreUserRequest;
 use App\Http\Requests\UserRequests\UpdateUserRequest;
 use App\Models\UserModel;
 use App\Services\UserServices\UserService;
+use App\Support\TenantContext;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 
 class UserController extends Controller
 {
     public function __construct(
         protected UserService $service,
+        protected TenantContext $tenant,
     ) {}
 
     public function index(PaginationRequest $request): JsonResponse
@@ -24,7 +25,7 @@ class UserController extends Controller
 
         return response()->json($this->service->getUsersForUbs(
             $request->perPage(),
-            (string) Auth::guard('keycloak')->id(),
+            $this->tenant->ubsId($request->user()),
         ));
     }
 
@@ -38,7 +39,7 @@ class UserController extends Controller
 
     public function store(StoreUserRequest $request): JsonResponse
     {
-        $ubsId = (string) Auth::guard('keycloak')->id();
+        $ubsId = $this->tenant->ubsId($request->user());
         Gate::authorize('create', [UserModel::class, $ubsId]);
 
         return response()->json($this->service->createUser([
