@@ -10,19 +10,19 @@ class PostgresqlHomologationSmokeTest extends TestCase
 {
     public function test_real_administrator_can_create_review_and_activate_a_ubs(): void
     {
-        $email = env('HOMOLOG_ADMIN_EMAIL');
+        $adminCode = env('HOMOLOG_ADMIN_CODE');
         $password = env('HOMOLOG_ADMIN_PASSWORD');
 
-        if (! is_string($email) || ! is_string($password)) {
-            $this->markTestSkipped('Defina HOMOLOG_ADMIN_EMAIL e HOMOLOG_ADMIN_PASSWORD para o smoke test PostgreSQL.');
+        if (! is_string($adminCode) || ! is_string($password)) {
+            $this->markTestSkipped('Defina HOMOLOG_ADMIN_CODE e HOMOLOG_ADMIN_PASSWORD para o smoke test PostgreSQL.');
         }
 
         $this->assertSame('pgsql', config('database.default'));
-        $this->assertStringContainsString('homolog', (string) config('database.connections.pgsql.database'));
+        $this->assertSame('glicodata_db', config('database.connections.pgsql.database'));
 
         $token = $this->postJson('/api/auth/login', [
             'account_type' => 'admin',
-            'identifier' => $email,
+            'identifier' => $adminCode,
             'password' => $password,
             'device_name' => 'homologacao-postgresql',
         ])->assertOk()->json('access_token');
