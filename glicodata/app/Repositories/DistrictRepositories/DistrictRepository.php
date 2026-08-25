@@ -4,6 +4,7 @@ namespace App\Repositories\DistrictRepositories;
 
 use App\Models\DistrictModel;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Collection;
 
 class DistrictRepository
 {
@@ -19,5 +20,13 @@ class DistrictRepository
     public function findDistrictById(string $id): ?DistrictModel
     {
         return $this->model->newQuery()->find($id);
+    }
+
+    /**
+     * @return Collection<int, DistrictModel>
+     */
+    public function allDistricts(): Collection
+    {
+        return $this->model->newQuery()->orderBy('name')->get();
     }
 }
