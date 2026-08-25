@@ -19,9 +19,10 @@ class StoreAssessmentRequest extends ApiFormRequest
     {
         return [
             'patient_id' => ['required', 'uuid', Rule::exists('patients', 'id')],
-            'user_id' => ['required', 'uuid', Rule::exists('users', 'id')],
-            'symptoms' => ['required', 'string'],
-            'answers' => ['required', 'array'],
+            'questionnaire_version_id' => ['nullable', 'uuid', Rule::exists('questionnaire_versions', 'id')],
+            'symptoms' => ['nullable', 'string', 'max:5000'],
+            'answers' => ['nullable', 'array'],
+            'answers.*' => ['nullable'],
         ];
     }
 }
