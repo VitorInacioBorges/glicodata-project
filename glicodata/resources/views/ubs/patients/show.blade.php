@@ -19,7 +19,7 @@
         </div>
 
         <p class="gd-eyebrow">Paciente</p>
-        <h1 class="gd-heading">{{ $patient->name }}</h1>
+        <h1 class="gd-heading">{{ $patient->first_name }}</h1>
         <p class="gd-subtitle">Registro assistencial da unidade autenticada.</p>
 
         <div class="gd-detail-grid">
@@ -27,24 +27,16 @@
                 <h2 id="patient-data-title">Informações cadastrais</h2>
                 <dl class="gd-fields">
                     <div class="gd-field">
-                        <dt>Nascimento</dt>
-                        <dd>{{ $patient->birth->format('d/m/Y') }} ({{ $patient->age }} anos)</dd>
-                    </div>
-                    <div class="gd-field">
                         <dt>Sexo</dt>
                         <dd>{{ $patient->sex ? 'Masculino' : 'Feminino' }}</dd>
                     </div>
                     <div class="gd-field">
-                        <dt>CPF</dt>
-                        <dd>{{ $patient->cpf }}</dd>
+                        <dt>Bairro</dt>
+                        <dd>{{ $patient->neighborhood }}</dd>
                     </div>
                     <div class="gd-field">
-                        <dt>Telefone</dt>
-                        <dd>{{ $patient->phone ?: 'Não informado' }}</dd>
-                    </div>
-                    <div class="gd-field">
-                        <dt>Endereço</dt>
-                        <dd>{{ $patient->address ?: 'Não informado' }}</dd>
+                        <dt>Logradouro</dt>
+                        <dd>{{ $patient->street_name ?: 'Não informado' }}</dd>
                     </div>
                     <div class="gd-field">
                         <dt>Identificador</dt>
@@ -67,7 +59,8 @@
                                 </a>
                             </strong>
                             <span>
-                                {{ $assessment->created_at->format('d/m/Y H:i') }} · {{ $assessment->user?->name }}
+                                {{ $assessment->created_at->format('d/m/Y H:i') }} ·
+                                {{ $assessment->professional?->first_name }} ({{ $assessment->professional?->specialty }})
                             </span>
                         </li>
                     @empty
