@@ -79,7 +79,7 @@ UserServices/UserService -> UserRepositories/UserRepository -> UserModel
 
 ### Policy / Gate
 
-Controllers use `Gate::authorize()` before returning or changing resources. Policies live in entity subfolders, such as `app/Policies/UserPolicies/UserPolicy.php`, and receive the authenticated UBS as the user from the `keycloak` guard.
+Controllers use `Gate::authorize()` before returning or changing resources. Policies receive the UBS or administrator authenticated by Sanctum/session guards.
 
 ### Shared Validation Trait
 
@@ -87,7 +87,7 @@ Controllers use `Gate::authorize()` before returning or changing resources. Poli
 
 ### Form Requests
 
-`Http/Requests` contains resource requests for writes, pagination, and audit redaction. Server-owned values such as `ubs_id`, `keycloak_id`, and passwords cannot be supplied in API payloads.
+`Http/Requests` contains resource requests for writes, authentication, pagination, and audit redaction. Server-owned tenant and audit values cannot be supplied in API payloads.
 
 ### Active Record / Eloquent Model
 
@@ -139,13 +139,13 @@ The same pattern exists for:
 | **Routes** | `routes/api.php` receives the `/api` prefix; `routes/web.php` stays outside the API prefix. |
 | **Responses** | Controllers return JSON for the API; `store` uses status 201 and delete uses 204. |
 | **HTTP validation** | Form Requests normalize and validate input; controllers pass `$request->validated()`. |
-| **Authentication** | API uses the `keycloak` guard; UBS login/callback are the only open API routes in production. |
-| **Local bypass** | `GLICODATA_AUTH_DISABLED` may only be used in development for visual browsing and API calls without a token. |
-| **Authorization** | Controllers use `Gate::authorize()`; the Keycloak `audit-admin` client role manages UBS data and global audit access. |
-| **Audit** | Operational writes and Keycloak linking record `jsonb` snapshots; payload redaction is itself audited. |
+| **Authentication** | API uses `auth:sanctum`; only login and health are public. Blade uses `ubs` and `admin` session guards. |
+| **Credentials** | Argon2id password hashes and 24-hour tokens that are never persisted in plaintext. |
+| **Authorization** | Controllers use `Gate::authorize()`; `AdministratorModel` manages UBS and global audit. |
+| **Audit** | Writes record `jsonb` snapshots with a UBS or administrator actor; payload redaction is audited. |
 
 ---
 
 ## Known Inconsistencies
 
-- Existing tests still require a dedicated update for the `birth`, `SoftDeletes`, Keycloak, and Form Request contracts.
+- Full CRUD, audit rollback, and real PostgreSQL coverage should still grow before final acceptance.
