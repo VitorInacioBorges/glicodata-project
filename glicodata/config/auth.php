@@ -14,8 +14,8 @@ return [
     */
 
     'defaults' => [
-        'guard' => env('AUTH_GUARD', 'web'),
-        'passwords' => env('AUTH_PASSWORD_BROKER', 'users'),
+        'guard' => env('AUTH_GUARD', 'ubs'),
+        'passwords' => env('AUTH_PASSWORD_BROKER', 'administrators'),
     ],
 
     /*
@@ -36,17 +36,9 @@ return [
     */
 
     'guards' => [
-        'web' => [
-            'driver' => 'session',
-            'provider' => 'users',
-        ],
         'ubs' => [
             'driver' => 'session',
             'provider' => 'ubs',
-        ],
-        'user' => [
-            'driver' => 'session',
-            'provider' => 'users',
         ],
         'admin' => [
             'driver' => 'session',
@@ -72,10 +64,6 @@ return [
     */
 
     'providers' => [
-        'users' => [
-            'driver' => 'eloquent',
-            'model' => env('AUTH_MODEL', App\Models\UserModel::class),
-        ],
         'ubs' => [
             'driver' => 'eloquent',
             'model' => App\Models\UbsModel::class,
@@ -111,8 +99,8 @@ return [
     */
 
     'passwords' => [
-        'users' => [
-            'provider' => 'users',
+        'administrators' => [
+            'provider' => 'administrators',
             'table' => env('AUTH_PASSWORD_RESET_TOKEN_TABLE', 'password_reset_tokens'),
             'expire' => 60,
             'throttle' => 60,
