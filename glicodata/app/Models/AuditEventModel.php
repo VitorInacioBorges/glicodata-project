@@ -16,6 +16,8 @@ class AuditEventModel extends Model
 
     protected $fillable = [
         'actor_ubs_id',
+        'actor_administrator_id',
+        'actor_user_id',
         'owner_ubs_id',
         'actor_name',
         'actor_email',
@@ -26,6 +28,7 @@ class AuditEventModel extends Model
         'after_payload',
         'redacted_at',
         'redacted_by_ubs_id',
+        'redacted_by_administrator_id',
         'redaction_reason',
     ];
 
@@ -47,6 +50,19 @@ class AuditEventModel extends Model
     public function actor(): BelongsTo
     {
         return $this->belongsTo(UbsModel::class, 'actor_ubs_id');
+    }
+
+    /**
+     * @return BelongsTo<AdministratorModel, $this>
+     */
+    public function administratorActor(): BelongsTo
+    {
+        return $this->belongsTo(AdministratorModel::class, 'actor_administrator_id');
+    }
+
+    public function userActor(): BelongsTo
+    {
+        return $this->belongsTo(UserModel::class, 'actor_user_id')->withTrashed();
     }
 
     /**
