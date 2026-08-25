@@ -48,8 +48,8 @@ Laravel's container injects controllers, services, repositories, and models. Dep
 | --- | --- |
 | **Input validation** | Form Requests are implemented; maintain them as the only input boundary for write payloads. |
 | **Error format** | Standardize JSON responses for validation, not found, and conflict errors. |
-| **Authentication** | Keep Keycloak as the primary source and document realm/client configuration per environment. |
-| **Authorization** | Keep the Keycloak `audit-admin` client role provisioned only for institutional administrators. |
+| **Authentication** | Keep Sanctum expiration, token limits, Argon2id, and revocation covered by tests. |
+| **Authorization** | Keep global administrators separate from UBS and deny automatic clinical access. |
 | **Transactions** | Written operations and their audit events are transactional; preserve this invariant in new workflows. |
 
 ---
@@ -80,7 +80,7 @@ glicodata/tests/
 The current checkout contains example tests:
 
 - `GET /` must return HTTP 200.
-- Existing API validation tests require a later revision for Form Requests, `birth`, logical deletion, audit, and the `keycloak` guard.
+- Authentication tests cover API/web login, expiration, rate limiting, revocation, account separation, and credential commands.
 - One basic unit test asserts that `true` is true.
 
 To cover the real API, prioritize:
@@ -97,9 +97,9 @@ To cover the real API, prioritize:
 
 ### Authentication
 
-`UbsModel` extends `Authenticatable`, hides `password`, and has the `password => hashed` cast. The API's main authentication uses Keycloak/OpenID through Laravel Socialite and the `keycloak` guard. Local username/password login is no longer the primary source.
+`UbsModel` and `AdministratorModel` extend `Authenticatable`, hide passwords, use the `hashed` cast, and issue Sanctum tokens. Passwords are compared with `Hash::check` and are never decrypted. Blade uses separate session guards.
 
-For local visual development, `GLICODATA_AUTH_DISABLED` can be enabled. When active, the `keycloak` guard resolves one active UBS from the database and UBS web routes temporarily run without `auth:ubs`. This flag must remain `false` in staging and production.
+There is no authentication bypass. Initial credentials are provisioned through interactive Artisan commands.
 
 ### Authorization
 
@@ -116,7 +116,7 @@ Entity policies are registered in `AppServiceProvider` and called by controllers
 | **Professional role** | `UserRole::Professional` identifies doctors and nurses; `admin` may also be associated as an assessment executor. |
 | **Mass assignment** | Models use `fillable`, reducing exposure of disallowed fields. |
 | **Password** | `UserModel` and `UbsModel` hide `password` and apply the `hashed` cast. |
-| **Bearer token** | `KeycloakUbsAuthService` calls Keycloak's `userinfo` endpoint to resolve the active UBS. |
+| **Bearer token** | Sanctum stores SHA-256 hashes, applies abilities, expires tokens in 24 hours, and limits accounts to 20. |
 | **CSRF** | The Blade form uses `@csrf`. |
 
 ### Environment Variables
@@ -127,12 +127,12 @@ Entity policies are registered in `AppServiceProvider` and called by controllers
 APP_ENV=local
 APP_DEBUG=true
 DB_CONNECTION=pgsql
-KEYCLOAK_BASE_URL=
-KEYCLOAK_REALM=
-KEYCLOAK_WEB_REDIRECT_URI="${APP_URL}/auth/ubs/callback"
-GLICODATA_AUTH_DISABLED=false
-GLICODATA_AUTH_BYPASS_UBS_EMAIL=
+HASH_DRIVER=argon2id
+HASH_VERIFY=false
+SANCTUM_EXPIRATION=1440
+SANCTUM_TOKEN_PREFIX=glicodata_
 SESSION_DRIVER=database
+SESSION_ENCRYPT=true
 QUEUE_CONNECTION=database
 CACHE_STORE=database
 ```
@@ -159,11 +159,10 @@ In production:
 
 | Risk | Impact |
 | --- | --- |
-| Misconfigured Keycloak dependency | Tokens will not be validated and protected routes will return 401. |
-| Local bypass enabled outside development | Web routes and API calls could operate without an institutional token. |
+| Public CNES claim without review | An attacker could claim a real CNES; accounts therefore remain inactive until manual administrator approval. |
+| Scheduler not running | Expired tokens stop authenticating, but old database rows accumulate until pruning runs. |
 | Audit snapshots contain personal data | Database access, backups, retention, and redaction procedures must be restricted according to NTI governance. |
-| Consolidated fresh-install migrations | An existing deployed database cannot receive this schema without a dedicated transition migration plan. |
-| Provisional institutional entries | UBS records with temporary email/contact data remain inactive until verified by an administrator. |
+| Irreversible legacy cleanup | The catalog cleanup deletes linked clinical/audit data and requires a verified PostgreSQL backup. |
 
 ---
 
@@ -171,7 +170,7 @@ In production:
 
 1. Add API Resources to control response shape and prevent unnecessary personal-data exposure.
 2. Establish NTI-approved audit retention, backup access, and redaction procedures before production data is processed.
-3. Provision and review Keycloak roles per environment, especially `audit-admin`.
+3. Provision and review global administrator accounts separately from UBS accounts.
 4. Update and expand feature tests in the dedicated testing stage.
 5. Evaluate caching or token introspection if the `userinfo` endpoint becomes a bottleneck.
-6. Ensure `GLICODATA_AUTH_DISABLED=false` in every shared or institutional environment.
+6. Run `sanctum:prune-expired --hours=24` through the production scheduler.
