@@ -5,6 +5,7 @@ namespace App\Http\Controllers\AuditEventControllers;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\AuditEventRequests\RedactAuditEventRequest;
 use App\Http\Requests\CommonRequests\PaginationRequest;
+use App\Http\Resources\AuditEventResource;
 use App\Models\AdministratorModel;
 use App\Models\AuditEventModel;
 use App\Models\UbsModel;
@@ -23,10 +24,12 @@ class AuditEventController extends Controller
     {
         Gate::authorize('viewAny', AuditEventModel::class);
 
-        return response()->json($this->service->getAuditEventsForActor(
+        $collection = AuditEventResource::collection($this->service->getAuditEventsForActor(
             $request->perPage(),
             $this->authenticatedAccount($request),
         ));
+
+        return response()->json($collection->response()->getData(true));
     }
 
     public function show(string $id): JsonResponse
@@ -34,7 +37,7 @@ class AuditEventController extends Controller
         $event = $this->service->getAuditEventById($id);
         Gate::authorize('view', $event);
 
-        return response()->json($event);
+        return response()->json(AuditEventResource::make($event));
     }
 
     public function redact(RedactAuditEventRequest $request, string $id): JsonResponse
@@ -42,11 +45,11 @@ class AuditEventController extends Controller
         $event = $this->service->getAuditEventById($id);
         Gate::authorize('redact', $event);
 
-        return response()->json($this->service->redactAuditEvent(
+        return response()->json(AuditEventResource::make($this->service->redactAuditEvent(
             $id,
             (string) $request->validated('reason'),
             $this->authenticatedAdministrator($request),
-        ));
+        )));
     }
 
     private function authenticatedAccount(Request $request): UbsModel|AdministratorModel
