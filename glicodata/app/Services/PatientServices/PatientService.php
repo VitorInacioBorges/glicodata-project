@@ -9,6 +9,7 @@ use App\Utils\ValidateUtils;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class PatientService
 {
@@ -18,11 +19,6 @@ class PatientService
         protected PatientRepository $repository,
         protected AuditEventService $auditService,
     ) {}
-
-    public function getAllPatients(int $perPage): LengthAwarePaginator
-    {
-        return $this->repository->paginatePatients($this->normalizePerPage($perPage));
-    }
 
     public function getPatientsForUbs(int $perPage, string $ubsId): LengthAwarePaginator
     {
@@ -49,6 +45,8 @@ class PatientService
      */
     public function createPatient(array $data): PatientModel
     {
+        $data = $this->normalizePatientData($data);
+
         return DB::transaction(function () use ($data): PatientModel {
             $patient = $this->repository->createPatient($data);
             $this->auditService->record('create', $patient, (string) $patient->ubs_id, null, $patient->toArray());
@@ -63,6 +61,7 @@ class PatientService
     public function updatePatient(string $id, array $data): PatientModel
     {
         $patient = $this->getPatientById($id);
+        $data = $this->normalizePatientData($data);
 
         return DB::transaction(function () use ($patient, $data): PatientModel {
             $before = $patient->toArray();
@@ -97,5 +96,16 @@ class PatientService
     private function normalizePerPage(int $perPage): int
     {
         return max(1, min(20, $perPage));
+    }
+
+    /** @param array<string, mixed> $data */
+    private function normalizePatientData(array $data): array
+    {
+        if (array_key_exists('neighborhood', $data)) {
+            $normalized = Str::lower(Str::ascii((string) $data['neighborhood']));
+            $data['neighborhood_normalized'] = preg_replace('/\s+/', ' ', trim($normalized));
+        }
+
+        return $data;
     }
 }
