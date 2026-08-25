@@ -8,10 +8,11 @@
         <div class="d-flex justify-content-between gap-3">
             <div>
                 <p class="gd-eyebrow">Rascunho</p>
-                <h1 class="gd-heading">Anamnese de {{ $assessment->patient->name }}</h1>
+                <h1 class="gd-heading">Anamnese de {{ $assessment->patient->first_name }}</h1>
                 <p class="gd-subtitle">
                     {{ $assessment->questionnaireVersion->questionnaire->title }} · versão
-                    {{ $assessment->questionnaireVersion->version }}
+                    {{ $assessment->questionnaireVersion->version }} · profissional:
+                    {{ $assessment->professional->first_name }} ({{ $assessment->professional->specialty }})
                 </p>
             </div>
             <span class="gd-status gd-status-warning align-self-start">Rascunho</span>
@@ -33,12 +34,6 @@
                 @csrf
                 @method('PUT')
 
-                <div class="mb-4">
-                    <label class="form-label" for="symptoms">Sintomas e observações</label>
-                    <textarea class="form-control" id="symptoms" name="symptoms" rows="4" maxlength="5000">{{ old('symptoms', $assessment->symptoms) }}</textarea>
-                </div>
-
-                <hr class="my-4">
                 <h2 class="h5 mb-4">Questionário</h2>
                 @include('ubs.assessments._questionnaire')
 
