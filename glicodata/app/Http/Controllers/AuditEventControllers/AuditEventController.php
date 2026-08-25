@@ -5,11 +5,12 @@ namespace App\Http\Controllers\AuditEventControllers;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\AuditEventRequests\RedactAuditEventRequest;
 use App\Http\Requests\CommonRequests\PaginationRequest;
+use App\Models\AdministratorModel;
 use App\Models\AuditEventModel;
 use App\Models\UbsModel;
 use App\Services\AuditEventServices\AuditEventService;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\Auth;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 
 class AuditEventController extends Controller
@@ -24,7 +25,7 @@ class AuditEventController extends Controller
 
         return response()->json($this->service->getAuditEventsForActor(
             $request->perPage(),
-            $this->authenticatedUbs(),
+            $this->authenticatedAccount($request),
         ));
     }
 
@@ -44,15 +45,23 @@ class AuditEventController extends Controller
         return response()->json($this->service->redactAuditEvent(
             $id,
             (string) $request->validated('reason'),
-            $this->authenticatedUbs(),
+            $this->authenticatedAdministrator($request),
         ));
     }
 
-    private function authenticatedUbs(): UbsModel
+    private function authenticatedAccount(Request $request): UbsModel|AdministratorModel
     {
-        /** @var UbsModel $ubs */
-        $ubs = Auth::guard('keycloak')->user();
+        $account = $request->user();
+        abort_unless($account instanceof UbsModel || $account instanceof AdministratorModel, 403);
 
-        return $ubs;
+        return $account;
+    }
+
+    private function authenticatedAdministrator(Request $request): AdministratorModel
+    {
+        $account = $request->user();
+        abort_unless($account instanceof AdministratorModel, 403);
+
+        return $account;
     }
 }
