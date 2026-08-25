@@ -9,8 +9,7 @@ class RiskRepository
 {
     public function __construct(
         protected RiskModel $model,
-    ) {
-    }
+    ) {}
 
     public function paginateRisks(int $perPage): LengthAwarePaginator
     {
@@ -23,16 +22,18 @@ class RiskRepository
             ->whereHas('assessment', function ($query) use ($ubsId): void {
                 $query->where('ubs_id', $ubsId);
             })
+            ->with(['assessment.patient', 'assessment.questionnaireVersion.questionnaire'])
+            ->latest()
             ->paginate($perPage);
     }
 
     public function findRiskById(string $id): ?RiskModel
     {
-        return $this->model->newQuery()->find($id);
+        return $this->model->newQuery()->with(['assessment.patient'])->find($id);
     }
 
     /**
-     * @param array<string, mixed> $data
+     * @param  array<string, mixed>  $data
      */
     public function createRisk(array $data): RiskModel
     {
