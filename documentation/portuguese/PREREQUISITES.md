@@ -17,7 +17,7 @@ Versoes observadas durante a geracao desta documentacao:
 | --- | --- |
 | PHP | `8.3.6` |
 | Composer | `2.7.1` |
-| Laravel | `12.60.2` |
+| Laravel | `12.67.0` |
 | Node.js | `24.14.0` |
 | npm | `11.9.0` |
 
@@ -41,12 +41,14 @@ Para novos sistemas no contexto NTI/UEPG, PostgreSQL e o banco padrao do projeto
 | `mbstring` | Dependencia comum do Laravel e Symfony. |
 | `openssl` | Criptografia, chaves e operacoes seguras. |
 | `fileinfo` | Validacao e manipulacao de arquivos. |
+| `dom` / `xml` | Exigidas pelo Laravel, Pint e PHPUnit durante `composer install`. |
+| `curl` | Comunicacao HTTP usada pelo Composer e integracoes. |
+| `intl` | Internacionalizacao e utilitarios Symfony/Laravel. |
+| `zip` | Instalacao eficiente dos pacotes Composer. |
 
-### Servico Externo de Autenticacao
+### Autenticacao
 
-| Servico | Motivo |
-| --- | --- |
-| **Keycloak/OpenID Connect** | Necessario para autenticar contas de UBS e validar tokens Bearer usados pela API. |
+Nao ha servico externo de identidade obrigatorio. Credenciais ficam no PostgreSQL como hashes Argon2id; Laravel Sanctum emite os tokens Bearer da API.
 
 ---
 
@@ -56,9 +58,8 @@ Para novos sistemas no contexto NTI/UEPG, PostgreSQL e o banco padrao do projeto
 
 | Pacote | Versao instalada | Categoria |
 | --- | --- | --- |
-| `laravel/framework` | `v12.60.2` | Framework principal |
-| `laravel/socialite` | `v5.27.0` | OAuth/OpenID client para login externo. |
-| `socialiteproviders/keycloak` | `5.3.0` | Provider Keycloak para Laravel Socialite. |
+| `laravel/framework` | `v12.67.0` | Framework principal |
+| `laravel/sanctum` | `v4.3.3` | Tokens pessoais Bearer com abilities e expiracao. |
 | `laravel/tinker` | `v2.10.1` | REPL |
 | `fakerphp/faker` | `v1.24.1` | Dados falsos para testes/factories |
 | `laravel/pail` | `v1.2.3` | Logs em desenvolvimento |
@@ -121,13 +122,14 @@ Antes de executar a aplicacao:
 3. Copie `.env.example` para `.env`.
 4. Gere `APP_KEY`.
 5. Configure as credenciais PostgreSQL.
-6. Configure `KEYCLOAK_CLIENT_ID`, `KEYCLOAK_CLIENT_SECRET`, `KEYCLOAK_REDIRECT_URI`, `KEYCLOAK_WEB_REDIRECT_URI`, `KEYCLOAK_BASE_URL` e `KEYCLOAK_REALM`.
-7. Configure a client role Keycloak `audit-admin` somente para administradores institucionais autorizados.
-8. Rode migrations em banco PostgreSQL novo ou prepare migrations de transicao revisadas para uma base existente.
+6. Configure Argon2id, sessao segura e expiracao Sanctum de 1.440 minutos.
+7. Rode as migrations incrementais no PostgreSQL.
+8. Crie o primeiro administrador com `php artisan glicodata:admin-create`.
+9. Cadastre UBS em `/cadastro/ubs`, revise-as em `/admin/ubs` e use `php artisan glicodata:ubs-password 1234567` apenas para redefinicao operacional.
 
-Para desenvolvimento visual local sem Keycloak configurado, `GLICODATA_AUTH_DISABLED=true` libera temporariamente as rotas web e faz o guard `keycloak` resolver uma UBS ativa local. Mantenha `false` em homologacao e producao.
+Nao existe bypass de autenticacao. Contas administrativas sao separadas das UBS e profissionais em `users` nao sao principais HTTP.
 
-As migrations atuais incluem a carga inicial de UBS e distritos de Ponta Grossa. Registros com email ou contato provisório entram inativos e nao autenticam ate regularizacao administrativa.
+As migrations carregam somente os cinco distritos de Ponta Grossa. UBS nao sao criadas automaticamente: o cadastro publico por CNES nasce inativo e exige aprovacao administrativa. A migration de remocao do catalogo antigo e irreversivel e requer backup previo.
 
 Para testes automatizados, `phpunit.xml` ja define SQLite em memoria:
 
