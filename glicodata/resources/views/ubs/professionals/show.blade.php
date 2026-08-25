@@ -1,72 +1,92 @@
 @extends('layouts.app')
-
-@section('title', 'Informações do profissional')
+@section('title', 'Conta individual')
 @section('protected-navigation', 'true')
-
 @section('content')
-    @php
-        $professionals = [
-            '0195e2f1-6b70-7cf0-864d-2f2b43b52001' => ['name' => 'Ana Martins Ribeiro', 'role' => 'Profissional', 'area' => 'Medicina geral', 'email' => 'ana.martins@ubs.demo', 'phone' => 'Não informado', 'patient' => 'Maria Aparecida Santos'],
-            '0195e2f1-6b70-7cf0-864d-2f2b43b52002' => ['name' => 'Carlos de Souza', 'role' => 'Profissional', 'area' => 'Enfermagem', 'email' => 'carlos.souza@ubs.demo', 'phone' => '(42) 99942-2210', 'patient' => 'Clara Vieira Lima'],
-            '0195e2f1-6b70-7cf0-864d-2f2b43b52003' => ['name' => 'Lúcia Almeida', 'role' => 'Administrador', 'area' => 'Gestão da unidade', 'email' => 'lucia.almeida@ubs.demo', 'phone' => '(42) 3901-1700', 'patient' => 'Não aplicável'],
-        ];
-        $professional = $professionals[$id] ?? ['name' => 'Profissional demonstrativo', 'role' => 'Profissional', 'area' => 'Não informado', 'email' => 'Não informado', 'phone' => 'Não informado', 'patient' => 'Não informado'];
-    @endphp
-
     <main id="conteudo" class="gd-page">
-        <a class="btn btn-outline-primary btn-sm mb-4" href="{{ route('ubs.professionals.index') }}">Voltar para profissionais</a>
-
-        <div class="d-flex flex-wrap align-items-start justify-content-between gap-3">
-            <div>
-                <p class="gd-eyebrow">Profissional</p>
-                <h1 class="gd-heading">{{ $professional['name'] }}</h1>
-                <p class="gd-subtitle">Perfil vinculado à unidade autenticada.</p>
+        <div class="d-flex justify-content-between gap-3 mb-4">
+            <a class="btn btn-outline-primary btn-sm" href="{{ route('ubs.professionals.index') }}">Voltar</a>
+            <div class="d-flex gap-2">
+                <a class="btn btn-primary btn-sm" href="{{ route('ubs.professionals.edit', $professional) }}">Editar</a>
+                <form method="POST" action="{{ route('ubs.professionals.destroy', $professional) }}"
+                    data-confirm="Remover esta conta?">
+                    @csrf
+                    @method('DELETE')
+                    <button class="btn btn-outline-danger btn-sm" type="submit">Remover</button>
+                </form>
             </div>
-            <span class="gd-demo-note">Exibição demonstrativa</span>
         </div>
 
+        <p class="gd-eyebrow">Identidade individual</p>
+        <h1 class="gd-heading">{{ $professional->name }}</h1>
+        <p class="gd-subtitle">{{ $professional->email }}</p>
         <div class="gd-detail-grid">
-            <section class="gd-panel gd-detail-section" aria-labelledby="professional-data-title">
-                <h2 id="professional-data-title">Informações do perfil</h2>
+            <section class="gd-panel gd-detail-section">
+                <h2>Conta e vínculo</h2>
                 <dl class="gd-fields">
                     <div class="gd-field">
-                        <dt>Perfil de acesso</dt>
-                        <dd><span class="gd-status gd-status-success">{{ $professional['role'] }}</span></dd>
+                        <dt>Papel</dt>
+                        <dd>{{ $professional->role->value === 'admin' ? 'Gestor da UBS' : 'Profissional de saúde' }}</dd>
                     </div>
                     <div class="gd-field">
-                        <dt>Área</dt>
-                        <dd>{{ $professional['area'] }}</dd>
+                        <dt>Status</dt>
+                        <dd>
+                            <span class="gd-status gd-status-{{ $professional->is_active ? 'success' : 'danger' }}">
+                                {{ $professional->is_active ? 'Ativo' : 'Inativo' }}
+                            </span>
+                        </dd>
                     </div>
                     <div class="gd-field">
-                        <dt>E-mail</dt>
-                        <dd>{{ $professional['email'] }}</dd>
+                        <dt>Conselho</dt>
+                        <dd>{{ $professional->council_type?->value ?: 'Não aplicável' }}</dd>
+                    </div>
+                    <div class="gd-field">
+                        <dt>Registro / UF</dt>
+                        <dd>{{ $professional->council_number ? $professional->council_number . '/' . $professional->council_uf : 'Não aplicável' }}
+                        </dd>
+                    </div>
+                    <div class="gd-field">
+                        <dt>Especialidade</dt>
+                        <dd>{{ $professional->specialty ?: 'Não aplicável' }}</dd>
+                    </div>
+                    <div class="gd-field">
+                        <dt>CPF</dt>
+                        <dd>{{ $professional->cpf }}</dd>
+                    </div>
+                    <div class="gd-field">
+                        <dt>Nascimento</dt>
+                        <dd>{{ $professional->birth->format('d/m/Y') }}</dd>
                     </div>
                     <div class="gd-field">
                         <dt>Telefone</dt>
-                        <dd>{{ $professional['phone'] }}</dd>
+                        <dd>{{ $professional->phone ?: 'Não informado' }}</dd>
                     </div>
                     <div class="gd-field">
                         <dt>Endereço</dt>
-                        <dd>Não informado</dd>
+                        <dd>{{ $professional->address ?: 'Não informado' }}</dd>
                     </div>
                     <div class="gd-field">
                         <dt>Identificador</dt>
-                        <dd class="gd-record-id">{{ $id }}</dd>
+                        <dd class="gd-record-id">{{ $professional->id }}</dd>
                     </div>
                 </dl>
             </section>
-
-            <section class="gd-panel gd-detail-section" aria-labelledby="professional-history-title">
-                <h2 id="professional-history-title">Atividade recente</h2>
+            <section class="gd-panel gd-detail-section">
+                <h2>Atividade clínica</h2>
                 <ol class="gd-timeline">
-                    <li>
-                        <strong>Avaliação registrada</strong>
-                        <span>24/05/2026 - {{ $professional['patient'] }}</span>
-                    </li>
-                    <li>
-                        <strong>Avaliação registrada</strong>
-                        <span>22/05/2026 - João Alves Ferreira</span>
-                    </li>
+                    @forelse ($professional->assessments->sortByDesc('created_at')->take(8) as $assessment)
+                        <li>
+                            <strong>{{ $assessment->patient?->name }}</strong>
+                            <span>
+                                {{ $assessment->created_at->format('d/m/Y H:i') }} ·
+                                {{ $assessment->status->value }}
+                            </span>
+                        </li>
+                    @empty
+                        <li>
+                            <strong>Sem anamneses</strong>
+                            <span>Nenhuma atividade clínica registrada.</span>
+                        </li>
+                    @endforelse
                 </ol>
             </section>
         </div>
