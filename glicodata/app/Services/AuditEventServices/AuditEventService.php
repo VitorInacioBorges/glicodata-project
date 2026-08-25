@@ -5,7 +5,6 @@ namespace App\Services\AuditEventServices;
 use App\Models\AdministratorModel;
 use App\Models\AuditEventModel;
 use App\Models\UbsModel;
-use App\Models\UserModel;
 use App\Repositories\AuditEventRepositories\AuditEventRepository;
 use App\Utils\ValidateUtils;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -19,9 +18,7 @@ class AuditEventService
 {
     use ValidateUtils;
 
-    public function __construct(
-        protected AuditEventRepository $repository,
-    ) {}
+    public function __construct(protected AuditEventRepository $repository) {}
 
     public function getAuditEventsForActor(int $perPage, UbsModel|AdministratorModel $actor): LengthAwarePaginator
     {
@@ -33,7 +30,6 @@ class AuditEventService
     public function getAuditEventById(string $id): AuditEventModel
     {
         $this->validateId($id);
-
         $event = $this->repository->findAuditEventById($id);
 
         if ($event === null) {
@@ -44,6 +40,9 @@ class AuditEventService
     }
 
     /**
+     * Values are intentionally discarded. Audit records contain only field
+     * names so personal and clinical content cannot be copied into snapshots.
+     *
      * @param  array<string, mixed>|null  $before
      * @param  array<string, mixed>|null  $after
      */
@@ -51,30 +50,29 @@ class AuditEventService
         string $action,
         Model $subject,
         string $ownerUbsId,
-        ?array $before,
-        ?array $after,
-        UbsModel|UserModel|AdministratorModel|null $actor = null,
+        ?array $before = null,
+        ?array $after = null,
+        UbsModel|AdministratorModel|null $actor = null,
     ): AuditEventModel {
         $actor ??= Auth::user();
 
-        if (! $actor instanceof UbsModel && ! $actor instanceof UserModel && ! $actor instanceof AdministratorModel) {
-            throw new LogicException('Uma conta autenticada e obrigatória para registrar auditoria.');
+        if (! $actor instanceof UbsModel && ! $actor instanceof AdministratorModel) {
+            throw new LogicException('Uma UBS ou administrador autenticado é obrigatório para registrar auditoria.');
         }
+
+        $changedFields = collect(array_unique([...array_keys($before ?? []), ...array_keys($after ?? [])]))
+            ->reject(fn (string $field): bool => in_array($field, ['password', 'remember_token'], true))
+            ->values()
+            ->all();
 
         return $this->repository->createAuditEvent([
             'actor_ubs_id' => $actor instanceof UbsModel ? $actor->id : null,
             'actor_administrator_id' => $actor instanceof AdministratorModel ? $actor->id : null,
-            'actor_user_id' => $actor instanceof UserModel ? $actor->id : null,
             'owner_ubs_id' => $ownerUbsId,
-            'actor_name' => $actor instanceof UbsModel
-                ? ($actor->name ?: "UBS CNES {$actor->cnes}")
-                : $actor->name,
-            'actor_email' => $actor->email,
             'subject_type' => $subject->getTable(),
             'subject_id' => $subject->getKey(),
             'action' => $action,
-            'before_payload' => $before,
-            'after_payload' => $after,
+            'changed_fields' => $changedFields === [] ? null : $changedFields,
         ]);
     }
 
@@ -82,37 +80,17 @@ class AuditEventService
     {
         return DB::transaction(function () use ($id, $reason, $actor): AuditEventModel {
             $event = $this->getAuditEventById($id);
-            $before = [
-                'id' => $event->id,
-                'action' => $event->action,
-                'redacted_at' => $event->redacted_at,
-            ];
-
             $event->fill([
-                'before_payload' => null,
-                'after_payload' => null,
+                'changed_fields' => null,
                 'redacted_at' => now(),
                 'redacted_by_ubs_id' => null,
                 'redacted_by_administrator_id' => $actor->id,
                 'redaction_reason' => $reason,
             ])->save();
 
-            $event = $event->refresh();
+            $this->record('redact', $event, (string) $event->owner_ubs_id, null, ['redacted_at' => true], $actor);
 
-            $this->record(
-                'redact',
-                $event,
-                (string) $event->owner_ubs_id,
-                $before,
-                [
-                    'id' => $event->id,
-                    'action' => $event->action,
-                    'redacted_at' => $event->redacted_at?->toISOString(),
-                ],
-                $actor,
-            );
-
-            return $event;
+            return $event->refresh();
         });
     }
 
