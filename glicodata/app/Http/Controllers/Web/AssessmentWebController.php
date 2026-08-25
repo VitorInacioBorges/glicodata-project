@@ -9,6 +9,7 @@ use App\Http\Requests\AssessmentRequests\StoreAssessmentRequest;
 use App\Http\Requests\AssessmentRequests\UpdateAssessmentRequest;
 use App\Models\AssessmentModel;
 use App\Models\PatientModel;
+use App\Models\ProfessionalModel;
 use App\Services\AssessmentServices\AssessmentService;
 use App\Services\QuestionnaireServices\QuestionnaireService;
 use App\Support\TenantContext;
@@ -40,19 +41,25 @@ class AssessmentWebController extends Controller
         Gate::authorize('create', [AssessmentModel::class, $ubsId]);
 
         return view('ubs.assessments.create', [
-            'patients' => PatientModel::query()->where('ubs_id', $ubsId)->orderBy('name')->get(),
+            'patients' => PatientModel::query()->where('ubs_id', $ubsId)->orderBy('first_name')->get(),
+            'professionals' => ProfessionalModel::query()
+                ->where('ubs_id', $ubsId)
+                ->where('is_active', true)
+                ->orderBy('first_name')
+                ->orderBy('specialty')
+                ->limit(20)
+                ->get(),
             'questionnaireVersion' => $this->questionnaires->currentPublished(),
         ]);
     }
 
     public function store(StoreAssessmentRequest $request): RedirectResponse
     {
-        $user = $this->tenant->user($request->user());
-        Gate::authorize('create', [AssessmentModel::class, (string) $user->ubs_id]);
+        $ubsId = $this->tenant->ubsId($request->user());
+        Gate::authorize('create', [AssessmentModel::class, $ubsId]);
         $assessment = $this->service->createAssessment([
             ...$request->validated(),
-            'ubs_id' => (string) $user->ubs_id,
-            'user_id' => (string) $user->id,
+            'ubs_id' => $ubsId,
         ]);
 
         return redirect()->route('ubs.assessments.edit', $assessment)->with('status', 'Anamnese iniciada. Preencha as respostas para concluir.');
@@ -88,7 +95,7 @@ class AssessmentWebController extends Controller
 
     public function complete(CompleteAssessmentRequest $request, string $id): RedirectResponse
     {
-        Gate::authorize('complete', $this->service->getAssessmentById($id));
+        Gate::authorize('update', $this->service->getAssessmentById($id));
         $assessment = $this->service->completeAssessment($id, $request->validated());
 
         return redirect()->route('ubs.assessments.show', $assessment)->with('status', 'Anamnese concluída e risco calculado no servidor.');
