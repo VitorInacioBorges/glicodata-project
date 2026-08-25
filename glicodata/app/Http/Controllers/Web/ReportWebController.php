@@ -41,7 +41,7 @@ class ReportWebController extends Controller
             ->where('ubs_id', $this->tenant->ubsId($request->user()))
             ->where('status', AssessmentStatus::Completed)
             ->whereDoesntHave('report')
-            ->with(['patient', 'risk'])
+            ->with(['patient', 'professional', 'risk'])
             ->latest('completed_at')
             ->get();
 
@@ -91,7 +91,7 @@ class ReportWebController extends Controller
 
     public function export(ExportReportsRequest $request): JsonResponse|Response
     {
-        Gate::authorize('export', ReportModel::class);
+        Gate::authorize('viewAny', ReportModel::class);
         $summary = $this->service->getAnonymizedSummaryForUbs($this->tenant->ubsId($request->user()));
 
         if ($request->validated('format', 'csv') === 'json') {
