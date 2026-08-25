@@ -1,61 +1,65 @@
-# Homologação de segurança e deploy
+# Homologação e deploy
 
-## Escopo automatizado
+## Homologação local em uma porta
 
-O checkout de homologação cobre autenticação institucional, individual e global; papéis; expiração e revogação de tokens; CSRF; isolamento entre UBS; CRUDs clínicos; questionário versionado; conclusão imutável; cálculo de risco no servidor; auditoria; exportação agregada; headers defensivos e migrations PostgreSQL.
+Use o mesmo PostgreSQL `glicodata_db` e não mantenha uma segunda aplicação em 8001:
 
 ```bash
 cd glicodata
+composer run homolog
+```
+
+A aplicação fica em `http://127.0.0.1:8000`. Os assets compilados são entregues em `/build/...` nessa mesma origem. O comando remove `public/hot`, portanto não há dependência da porta 5173 nesse modo.
+
+## Checklist automatizado
+
+```bash
 vendor/bin/pint --test
 php artisan test
-DB_PORT=5432 vendor/bin/phpunit --configuration phpunit.postgresql.xml
 npm run build
 composer audit
 npm audit
 php artisan route:list --except-vendor
+php artisan migrate:status
 ```
 
-O banco configurado em `phpunit.postgresql.xml` deve ser exclusivo de testes: `RefreshDatabase` recria seu schema. Nunca aponte essa configuração para homologação compartilhada ou produção.
+O teste padrão usa SQLite em memória. Nunca aponte uma configuração com `RefreshDatabase` para um PostgreSQL compartilhado.
 
-## Smoke test administrativo real
+## Smoke PostgreSQL opcional
 
-Crie o administrador por entrada interativa; a senha não é argumento nem conteúdo versionado:
+Crie um administrador interativamente:
 
 ```bash
-php artisan glicodata:admin-create \
-  --name="Administrador de Homologação" \
-  --email="admin@example.test"
+php artisan glicodata:admin-create ADMIN_HOMOLOG
 ```
 
-Depois execute, somente em banco descartável de homologação:
+Em banco descartável e explicitamente autorizado:
 
 ```bash
-HOMOLOG_ADMIN_EMAIL=admin@example.test \
-HOMOLOG_ADMIN_PASSWORD='senha-lida-de-um-secret-manager' \
+HOMOLOG_ADMIN_CODE=ADMIN_HOMOLOG \
+HOMOLOG_ADMIN_PASSWORD='senha-do-secret-manager' \
 vendor/bin/phpunit --configuration phpunit.postgresql.xml \
   --filter PostgresqlHomologationSmokeTest
 ```
 
-Esse teste autentica o administrador, cria uma UBS pendente, completa o perfil, ativa a conta e confirma a auditoria. Ele não deve ser incluído na rotina de produção.
+O smoke autentica por ID, cria uma UBS pendente, completa os dados institucionais, ativa a unidade e verifica a auditoria. Ele não deve rodar automaticamente em produção.
 
-## Preparação de produção
+## Deploy
 
-1. Validar restauração de backup PostgreSQL antes das migrations.
-2. Copiar `.env.production.example` para um secret store ou arquivo fora do release e preencher chaves e credenciais.
-3. Ajustar domínio, certificado, caminho do release e socket PHP-FPM em `deploy/nginx-glicodata.conf`.
-4. Instalar e habilitar `glicodata-worker.service` e `glicodata-scheduler.timer`.
-5. Publicar o código e executar:
+1. Valide um backup PostgreSQL restaurável.
+2. Preencha `.env.production.example` fora do repositório.
+3. Confirme `APP_DEBUG=false`, HTTPS, cookies seguros e `DB_DATABASE=glicodata_db`.
+4. Execute:
 
 ```bash
 GLICODATA_BACKUP_CONFIRMED=yes deploy/deploy.sh /var/www/glicodata/current/glicodata
 ```
 
-6. Confirmar HTTPS, `APP_DEBUG=false`, cookies `Secure`/`HttpOnly`, login dos três tipos, criação e ativação de UBS, isolamento entre duas UBS, worker, scheduler, logs e restauração do backup.
-7. Manter `HASH_VERIFY=false` durante a transição de hashes legados e ativar `true` somente após todas as credenciais terem sido regravadas em Argon2id.
+O script instala dependências, remove `public/hot`, compila assets, aplica migrations, semeia o questionário, otimiza caches e reinicia a fila. Nginx/PHP-FPM expõem somente a origem pública da aplicação; o Vite não deve rodar no servidor.
 
-## Pendências de aceite humano
+## Aceite humano
 
-- Aprovação formal da regra clínica e das faixas de risco pelo responsável médico.
-- Teste de intrusão e revisão de infraestrutura pelo NTI.
-- DPIA/RIPD, política de retenção, base legal e processo de atendimento aos titulares conforme LGPD.
-- Definição do domínio definitivo, certificados, backup criptografado e monitoração.
+- revisão clínica das regras FINDRISC;
+- teste de intrusão e revisão de infraestrutura;
+- política de retenção, RIPD/DPIA e processo LGPD;
+- backups criptografados, monitoração e teste de restauração.
