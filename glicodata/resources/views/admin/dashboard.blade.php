@@ -12,7 +12,7 @@
             </div>
             <div class="gd-hero-unit">
                 <small>Sessão ativa</small>
-                <strong>{{ auth('admin')->user()?->name ?? 'Administrador' }}</strong>
+                <strong>{{ auth('admin')->user()?->admin_code ?? 'Administrador' }}</strong>
                 <div class="small text-white-50 mt-1">Autenticação local segura</div>
             </div>
         </section>
