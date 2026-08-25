@@ -79,7 +79,7 @@ UserServices/UserService -> UserRepositories/UserRepository -> UserModel
 
 ### Policy / Gate
 
-Controllers usam `Gate::authorize()` antes de responder ou alterar recursos. As policies ficam em subpastas por entidade, como `app/Policies/UserPolicies/UserPolicy.php`, e recebem a UBS autenticada como usuario do guard `keycloak`.
+Controllers usam `Gate::authorize()` antes de responder ou alterar recursos. As policies ficam em subpastas por entidade e recebem a UBS ou o administrador autenticado pelo Sanctum/guard de sessao.
 
 ### Trait de Validacao Compartilhada
 
@@ -87,7 +87,7 @@ Controllers usam `Gate::authorize()` antes de responder ou alterar recursos. As 
 
 ### Form Requests
 
-`Http/Requests` possui requests por recurso para `store`, `update`, paginacao e redacao de auditoria. Campos controlados pelo servidor, como `ubs_id`, `keycloak_id` e senha, nao sao aceitos do corpo da API.
+`Http/Requests` possui requests por recurso para `store`, `update`, autenticacao, paginacao e redacao de auditoria. Campos controlados pelo servidor, como `ubs_id` e campos de auditoria, nao sao aceitos do corpo da API.
 
 ### Active Record / Eloquent Model
 
@@ -139,13 +139,13 @@ O mesmo padrao existe para:
 | **Rotas** | `routes/api.php` recebe prefixo `/api`; `routes/web.php` permanece sem prefixo API. |
 | **Respostas** | Controllers retornam JSON para API; `store` usa status 201 e delete usa 204. |
 | **Validacao HTTP** | Form Requests normalizam e validam entrada; controllers repassam `$request->validated()`. |
-| **Autenticacao** | API usa guard `keycloak`; login/callback de UBS sao as unicas rotas abertas em producao. |
-| **Bypass local** | `GLICODATA_AUTH_DISABLED` so pode ser usado em desenvolvimento para visualizacao e chamadas API sem token. |
-| **Autorizacao** | Controllers usam `Gate::authorize()`; a role Keycloak `audit-admin` administra UBS e auditoria global. |
-| **Auditoria** | Escritas operacionais e vinculacao Keycloak registram snapshots `jsonb`; redacao e auditada. |
+| **Autenticacao** | API usa `auth:sanctum`; somente login e health ficam publicos. Blade usa guards `ubs` e `admin`. |
+| **Credenciais** | Senhas usam hash Argon2id; tokens duram 24 horas e nunca sao persistidos em texto puro. |
+| **Autorizacao** | Controllers usam `Gate::authorize()`; `AdministratorModel` administra UBS e auditoria global. |
+| **Auditoria** | Escritas registram snapshots `jsonb` com ator UBS ou administrador; redacao e auditada. |
 
 ---
 
 ## Inconsistencias Conhecidas
 
-- Os testes existentes ainda precisam ser atualizados em uma etapa propria para os contratos `birth`, `SoftDeletes`, Keycloak e Form Requests.
+- A cobertura de CRUD completo, rollback de auditoria e PostgreSQL real ainda deve crescer antes da homologacao final.
