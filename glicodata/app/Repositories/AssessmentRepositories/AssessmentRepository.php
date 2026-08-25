@@ -11,16 +11,11 @@ class AssessmentRepository
         protected AssessmentModel $model,
     ) {}
 
-    public function paginateAssessments(int $perPage): LengthAwarePaginator
-    {
-        return $this->model->newQuery()->paginate($perPage);
-    }
-
     public function paginateAssessmentsForUbs(int $perPage, string $ubsId): LengthAwarePaginator
     {
         return $this->model->newQuery()
             ->where('ubs_id', $ubsId)
-            ->with(['patient', 'user', 'risk', 'report', 'questionnaireVersion.questionnaire'])
+            ->with(['patient', 'professional', 'risk', 'report', 'questionnaireVersion.questionnaire'])
             ->latest()
             ->paginate($perPage);
     }
@@ -28,7 +23,7 @@ class AssessmentRepository
     public function findAssessmentById(string $id): ?AssessmentModel
     {
         return $this->model->newQuery()
-            ->with(['patient', 'user', 'risk', 'report', 'questionnaireVersion.questionnaire'])
+            ->with(['patient', 'professional', 'risk', 'report', 'questionnaireVersion.questionnaire'])
             ->find($id);
     }
 
