@@ -5,7 +5,6 @@ namespace App\Services\AuthServices;
 use App\Enums\AccountType;
 use App\Models\AdministratorModel;
 use App\Models\UbsModel;
-use App\Models\UserModel;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -24,16 +23,12 @@ class AuthenticationService
         AccountType $accountType,
         string $identifier,
         #[\SensitiveParameter] string $password,
-    ): UbsModel|UserModel|AdministratorModel|null {
+    ): UbsModel|AdministratorModel|null {
         $account = $this->findAccount($accountType, $identifier);
         $hash = $account?->password ?? $this->dummyPasswordHash();
         $passwordMatches = Hash::check($password, $hash);
 
-        if (! $account instanceof UbsModel && ! $account instanceof UserModel && ! $account instanceof AdministratorModel) {
-            return null;
-        }
-
-        if (! $passwordMatches || ! $account->is_active || ($account instanceof UserModel && ! $account->hasActiveAccountContext())) {
+        if ($account === null || ! $passwordMatches || ! $account->is_active) {
             return null;
         }
 
@@ -48,7 +43,7 @@ class AuthenticationService
      * @return array{token: NewAccessToken, expires_at: CarbonImmutable}
      */
     public function issueToken(
-        UbsModel|UserModel|AdministratorModel $account,
+        UbsModel|AdministratorModel $account,
         AccountType $accountType,
         string $deviceName,
     ): array {
@@ -57,27 +52,14 @@ class AuthenticationService
 
         $token = DB::transaction(function () use ($account, $accountType, $deviceName, $expiresAt, $now): NewAccessToken {
             $account->newQuery()->whereKey($account->getKey())->lockForUpdate()->firstOrFail();
+            $account->tokens()->whereNotNull('expires_at')->where('expires_at', '<=', $now)->delete();
 
-            $account->tokens()
-                ->whereNotNull('expires_at')
-                ->where('expires_at', '<=', $now)
-                ->delete();
+            $token = $account->createToken($deviceName, [$accountType->ability()], $expiresAt);
+            $excess = max(0, $account->tokens()->count() - self::TOKEN_LIMIT);
+            $obsolete = $account->tokens()->orderBy('created_at')->orderBy('id')->limit($excess)->pluck('id');
 
-            $token = $account->createToken(
-                $deviceName,
-                [$accountType->ability()],
-                $expiresAt,
-            );
-
-            $excessTokenCount = max(0, $account->tokens()->count() - self::TOKEN_LIMIT);
-            $obsoleteTokenIds = $account->tokens()
-                ->orderBy('created_at')
-                ->orderBy('id')
-                ->limit($excessTokenCount)
-                ->pluck('id');
-
-            if ($obsoleteTokenIds->isNotEmpty()) {
-                $account->tokens()->whereKey($obsoleteTokenIds)->delete();
+            if ($obsolete->isNotEmpty()) {
+                $account->tokens()->whereKey($obsolete)->delete();
             }
 
             return $token;
@@ -87,61 +69,49 @@ class AuthenticationService
     }
 
     public function replacePassword(
-        UbsModel|UserModel|AdministratorModel $account,
+        UbsModel|AdministratorModel $account,
         #[\SensitiveParameter] string $password,
     ): void {
         DB::transaction(function () use ($account, $password): void {
-            $lockedAccount = $account->newQuery()
-                ->whereKey($account->getKey())
-                ->lockForUpdate()
-                ->firstOrFail();
-
-            $lockedAccount->forceFill(['password' => $password])->save();
-            $lockedAccount->tokens()->delete();
+            $locked = $account->newQuery()->whereKey($account->getKey())->lockForUpdate()->firstOrFail();
+            $locked->forceFill(['password' => $password])->save();
+            $locked->tokens()->delete();
         });
     }
 
-    /**
-     * @return array<string, mixed>
-     */
-    public function identity(UbsModel|UserModel|AdministratorModel $account): array
+    /** @return array<string, mixed> */
+    public function identity(UbsModel|AdministratorModel $account): array
     {
+        if ($account instanceof UbsModel) {
+            return [
+                'id' => (string) $account->id,
+                'cnes' => $account->cnes,
+                'name' => $account->name,
+                'is_active' => (bool) $account->is_active,
+            ];
+        }
+
         return [
             'id' => (string) $account->id,
-            'cnes' => $account instanceof UbsModel ? $account->cnes : null,
-            'ubs_id' => $account instanceof UserModel ? $account->ubs_id : null,
-            'name' => $account->name,
-            'email' => $account->email,
+            'admin_code' => $account->admin_code,
             'is_active' => (bool) $account->is_active,
-            'role' => $account instanceof UserModel ? $account->role->value : null,
-            'council_type' => $account instanceof UserModel ? $account->council_type?->value : null,
-            'council_number' => $account instanceof UserModel ? $account->council_number : null,
-            'council_uf' => $account instanceof UserModel ? $account->council_uf : null,
-            'specialty' => $account instanceof UserModel ? $account->specialty : null,
         ];
     }
 
-    private function findAccount(AccountType $accountType, string $identifier): UbsModel|UserModel|AdministratorModel|null
+    private function findAccount(AccountType $accountType, string $identifier): UbsModel|AdministratorModel|null
     {
-        $model = match ($accountType) {
-            AccountType::Ubs => new UbsModel,
-            AccountType::User => new UserModel,
-            AccountType::Administrator => new AdministratorModel,
-        };
-
         $identifier = trim($identifier);
 
-        return $model->newQuery()
-            ->when(
-                $accountType === AccountType::Ubs,
-                fn ($query) => $query->where('cnes', $identifier),
-                fn ($query) => $query->whereRaw('LOWER(email) = ?', [Str::lower($identifier)]),
-            )
-            ->first();
+        return match ($accountType) {
+            AccountType::Ubs => UbsModel::query()->where('cnes', $identifier)->first(),
+            AccountType::Administrator => AdministratorModel::query()
+                ->whereRaw('UPPER(admin_code) = ?', [Str::upper($identifier)])
+                ->first(),
+        };
     }
 
     private function dummyPasswordHash(): string
     {
-        return self::$dummyPasswordHash ??= Hash::make(Str::random(64));
+        return self::$dummyPasswordHash ??= Hash::make(Str::password(64));
     }
 }
