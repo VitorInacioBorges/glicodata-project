@@ -2,51 +2,18 @@
 
 namespace App\Policies\RiskPolicies;
 
-use App\Models\AssessmentModel;
 use App\Models\RiskModel;
-use App\Models\UserModel;
+use App\Models\UbsModel;
 
 class RiskPolicy
 {
-    public function viewAny(UserModel $user): bool
+    public function viewAny(UbsModel $ubs): bool
     {
-        return $this->isActive($user);
+        return (bool) $ubs->is_active;
     }
 
-    public function view(UserModel $user, RiskModel $risk): bool
+    public function view(UbsModel $ubs, RiskModel $risk): bool
     {
-        return $this->assessmentBelongsToUbs($user, $risk->assessment_id);
-    }
-
-    public function create(UserModel $user, mixed $assessmentId = null): bool
-    {
-        return $this->assessmentBelongsToUbs($user, is_string($assessmentId) ? $assessmentId : null);
-    }
-
-    public function update(UserModel $user, RiskModel $risk): bool
-    {
-        return $this->assessmentBelongsToUbs($user, $risk->assessment_id);
-    }
-
-    public function delete(UserModel $user, RiskModel $risk): bool
-    {
-        return $this->assessmentBelongsToUbs($user, $risk->assessment_id);
-    }
-
-    private function assessmentBelongsToUbs(UserModel $user, ?string $assessmentId): bool
-    {
-        if (! $this->isActive($user) || $assessmentId === null) {
-            return false;
-        }
-
-        return AssessmentModel::query()
-            ->whereKey($assessmentId)
-            ->where('ubs_id', $user->ubs_id)
-            ->exists();
-    }
-
-    private function isActive(UserModel $user): bool
-    {
-        return $user->hasActiveAccountContext();
+        return (bool) $ubs->is_active && $risk->assessment()->where('ubs_id', $ubs->id)->exists();
     }
 }
