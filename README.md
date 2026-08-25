@@ -1,64 +1,24 @@
-# 💉​ Projeto Glicodata
+# GlicoData
 
-[Português](#projeto-glicodata-portuguese) 🇧🇷 / 🇵🇹 | [English](#projeto-glicodata-english) 🇺🇸 / 🇬🇧 / 🇨🇦 / 🇦🇺
+Sistema Laravel para gerenciamento institucional de UBS e avaliação de risco de Diabetes Mellitus tipo 2 com minimização de dados.
 
-Sistema Laravel para apoiar o cadastro e a organizacao de dados de UBS, usuarios, pacientes, avaliacoes, riscos e relatorios relacionados ao acompanhamento de risco de Diabetes Mellitus II.
+## Contrato de privacidade
 
-## Propósito
+- Pacientes guardam somente primeiro nome, sexo, bairro e nome do logradouro sem número. A faixa etária é informada em cada avaliação; CPF, data de nascimento, telefone e endereço completo não existem no schema final.
+- Profissionais são referências clínicas sem login: primeiro nome, especialidade, UBS e status ativo. Não há e-mail, senha, CPF, nascimento, contato ou conselho profissional.
+- A UBS autentica pelo CNES e executa o fluxo clínico. O profissional responsável é selecionado por busca dentro da própria UBS.
+- Administradores autenticam com `admin_code` e senha; não possuem nome nem e-mail.
+- Relatórios guardam a anamnese e a descrição. Título e comentário interno foram removidos.
+- Auditoria guarda ator institucional, ação e nomes dos campos alterados, nunca cópias dos valores pessoais ou clínicos.
 
-Oferecer uma base de API e interface web simples para registrar unidades basicas de saude, pacientes, profissionais, avaliacoes clinicas, classificacoes de risco e relatorios. O projeto tambem funciona como base de estudo para arquitetura Laravel com controllers, services, repositories, Eloquent models, Blade, Vite e testes PHPUnit.
+## Stack
 
-## Objetivos
+- PHP 8.2+, Laravel 12 e Laravel Sanctum
+- PostgreSQL (`glicodata_db`) no ambiente da aplicação
+- Blade, Vite 7 e Bootstrap 5.3
+- PHPUnit com SQLite em memória
 
-- **Gestao de UBS**: Cadastro publico por CNES, aprovacao administrativa e autoedicao dos dados institucionais da unidade.
-- **Identidade e papeis**: Contas individuais de profissionais e gestores da UBS, com CRM/COREN, UF, especialidade e autoria auditavel.
-- **Autenticacao**: Guards separados para UBS, usuario individual e administrador global; Sanctum usa tokens Bearer de 24 horas.
-- **Anamnese e risco**: Questionario versionado, rascunho, conclusao imutavel e calculo de risco exclusivamente no servidor.
-- **Relatorios**: CRUD real e exportacao estatistica agregada com supressao de grupos pequenos e sem dados pessoais/texto livre.
-- **Base Laravel Evolutiva**: Separacao pragmatica entre controllers, services, repositories e models para evoluir validacao, autenticacao, migrations e testes.
-
-## Servicos
-
-| Servico             | Descricao                                                                                                        |
-| ------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| **Backend API**     | API REST em **Laravel 12** e **PHP 8.2+**, organizada por controllers, services, repositories e Eloquent models. |
-| **Autenticacao**    | **Laravel Sanctum** para tokens Bearer; guards de sessao separados para UBS, usuarios e administradores globais. |
-| **Interface Blade** | CRUD server-side real de pacientes, equipe, anamneses e relatorios, sempre escopado a UBS.                       |
-| **Assets**          | Build com **Vite 7**, **Bootstrap 5.3.8**, `laravel-vite-plugin` e Axios inicializado no bootstrap JS.           |
-| **Banco de Dados**  | PostgreSQL como banco padrao do projeto; SQLite fica restrito a testes automatizados quando configurado.         |
-
-## Documentacao Tecnica
-
-| Documento                                                                 | Descricao                                                           |
-| ------------------------------------------------------------------------- | ------------------------------------------------------------------- |
-| [ARCHITECTURE.md](./documentation/portuguese/ARCHITECTURE.md)             | Fundacao arquitetural, camadas, fluxo de dados e modulos do sistema |
-| [DIRECTORIES.md](./documentation/portuguese/DIRECTORIES.md)               | Mapeamento completo de diretorios e responsabilidades               |
-| [TECHNOLOGIES.md](./documentation/portuguese/TECHNOLOGIES.md)             | Stack, metodologias, dependencias e gerenciamento de dados          |
-| [CONVENTIONS.md](./documentation/portuguese/CONVENTIONS.md)               | Padroes de nomeacao, organizacao e design patterns                  |
-| [BEST-PRACTICES.md](./documentation/portuguese/BEST-PRACTICES.md)         | SOLID, tratamento de erros, testes, seguranca e riscos atuais       |
-| [PREREQUISITES.md](./documentation/portuguese/PREREQUISITES.md)           | Dependencias de sistema, ferramentas, banco e hardware              |
-| [EXECUTION.md](./documentation/portuguese/EXECUTION.md)                   | Setup local, variaveis de ambiente, migrations, endpoints e deploy  |
-| [HOMOLOGACAO-DEPLOY.md](./documentation/portuguese/HOMOLOGACAO-DEPLOY.md) | Evidencias, smoke test PostgreSQL e artefatos de deploy             |
-
-## Estrutura Geral
-
-```text
-ubs-system/
-├── glicodata/            # Aplicacao Laravel 12
-│   ├── app/              # Controllers, policies, services, repositories, models, providers e utils
-│   ├── database/         # Migrations, factories e seeders
-│   ├── resources/        # Views Blade e entradas Vite
-│   ├── routes/           # Rotas web e rotas API; API usa prefixo /api
-│   └── tests/            # Testes Feature e Unit
-├── documentation/
-│   ├── english/          # Documentacao em ingles
-│   └── portuguese/       # Documentacao em portugues
-└── README.md             # Este arquivo
-```
-
-## Inicio Rapido
-
-Com PHP 8.2+, Composer 2, Node.js 20+ e PostgreSQL instalados:
+## Início rápido
 
 ```bash
 cd glicodata
@@ -66,109 +26,61 @@ composer install
 npm ci
 cp .env.example .env
 php artisan key:generate
-# Configure o PostgreSQL no .env e crie o banco ubs_system.
 php artisan migrate --seed
 php artisan glicodata:admin-create
 composer run dev
 ```
 
-Novas UBS solicitam acesso em `/cadastro/ubs` com CNES e senha. A conta fica
-pendente ate um administrador ativa-la em `/admin/ubs`. Para redefinir uma senha
-por terminal, use `php artisan glicodata:ubs-password 1234567`.
-Profissionais entram por `/login/profissional`; contas institucionais criam a
-equipe inicial e nao executam atos clinicos.
+`composer run dev` usa Laravel em `127.0.0.1:8000` e Vite em `127.0.0.1:5173`. A porta 5173 serve somente CSS/JavaScript com hot reload; não é uma segunda aplicação nem outro banco.
 
-As extensoes PHP `dom`, `xml`, `mbstring`, `pdo_pgsql` e `pdo_sqlite` sao
-necessarias. Veja o [guia completo de execucao](./documentation/portuguese/EXECUTION.md)
-para instalar os pacotes de sistema, configurar PostgreSQL e provisionar credenciais locais.
+Para homologação em uma única porta de navegador, com assets compilados no mesmo host:
+
+```bash
+composer run homolog
+```
+
+Esse fluxo remove o marcador `public/hot`, compila os assets, aplica migrations, otimiza o Laravel e abre somente a aplicação em `http://127.0.0.1:8000`.
+
+## Autenticação
+
+- UBS: `/login/ubs`, identificador CNES e senha.
+- Administrador global: `/login/admin`, ID administrativo e senha.
+- Não existe login de profissional.
+
+Novas UBS solicitam acesso em `/cadastro/ubs` e permanecem inativas até aprovação administrativa. Senhas são definidas interativamente:
+
+```bash
+php artisan glicodata:admin-create ADMIN_001
+php artisan glicodata:ubs-password 1234567
+```
+
+## Verificação
+
+```bash
+php artisan test
+npm run build
+php artisan route:list --except-vendor
+```
+
+## Documentação
+
+- [Arquitetura](./documentation/portuguese/ARCHITECTURE.md)
+- [Execução e diagnóstico de portas/assets](./documentation/portuguese/EXECUTION.md)
+- [Homologação e deploy](./documentation/portuguese/HOMOLOGACAO-DEPLOY.md)
+- [Documentação em inglês](./documentation/english/ARCHITECTURE.md)
+
+Credenciais e segredos nunca devem ser registrados no repositório.
 
 ---
 
-# 💉​ Glicodata Project
+# GlicoData (English)
 
-[Português](#projeto-glicodata-portuguese) 🇧🇷 / 🇵🇹 | [English](#projeto-glicodata-english) 🇺🇸 / 🇬🇧 / 🇨🇦 / 🇦🇺
+Laravel application for UBS institutional management and type 2 diabetes risk assessment with data minimization.
 
-Laravel system to support UBS unit, user, patient, assessment, risk, and report data related to Diabetes Mellitus II risk tracking.
+- Patients contain only first name, sex, neighborhood, and street name without a house number. Age range is captured per assessment.
+- Professionals are non-login clinical references containing only first name, specialty, UBS, and active status.
+- UBS accounts own clinical sessions; global administrators authenticate using an administrator ID, without name or email.
+- `composer run dev` uses application port 8000 plus Vite asset port 5173. `composer run homolog` serves compiled assets and the application from port 8000 only.
+- PostgreSQL uses `glicodata_db`; SQLite in memory is reserved for automated tests.
 
-## Purpose
-
-To provide an API and simple web interface foundation for registering basic health units, patients, professionals, clinical assessments, risk classifications, and reports. The project also serves as a study base for Laravel architecture with controllers, services, repositories, Eloquent models, Blade, Vite, and PHPUnit tests.
-
-## Objectives
-
-- **UBS Management**: Public CNES registration, administrator approval, and self-service institutional profile editing.
-- **Identity and roles**: Individual professional/unit-manager accounts with council registration, state, specialty, and auditable authorship.
-- **Authentication**: Separate UBS, individual-user, and global-administrator guards with 24-hour Sanctum Bearer tokens.
-- **Anamnesis and risk**: Versioned questionnaire, drafts, immutable completion, and server-only risk calculation.
-- **Reports**: Real CRUD and aggregate exports without personal identifiers or free-text clinical content.
-- **Evolvable Laravel Base**: Pragmatic separation between controllers, services, repositories, and models to evolve validation, authentication, migrations, and tests.
-
-## Services
-
-| Service             | Description                                                                                                                 |
-| ------------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| **Backend API**     | REST API built with **Laravel 12** and **PHP 8.2+**, organized by controllers, services, repositories, and Eloquent models. |
-| **Authentication**  | **Laravel Sanctum** Bearer tokens with separate session guards for UBS, individual users, and global administrators.        |
-| **Blade Interface** | Real server-rendered CRUD for patients, staff, anamneses, and reports, always scoped to a UBS.                              |
-| **Assets**          | Build with **Vite 7**, **Bootstrap 5.3.8**, `laravel-vite-plugin`, and Axios initialized in the JS bootstrap.               |
-| **Database**        | PostgreSQL as the project default database; SQLite is limited to automated tests when configured.                           |
-
-## Technical Documentation
-
-| Document                                                       | Description                                                           |
-| -------------------------------------------------------------- | --------------------------------------------------------------------- |
-| [ARCHITECTURE.md](./documentation/english/ARCHITECTURE.md)     | Architectural foundation, layers, data flow, and system modules       |
-| [DIRECTORIES.md](./documentation/english/DIRECTORIES.md)       | Complete mapping of directories and responsibilities                  |
-| [TECHNOLOGIES.md](./documentation/english/TECHNOLOGIES.md)     | Stack, methodology, dependencies, and data management                 |
-| [CONVENTIONS.md](./documentation/english/CONVENTIONS.md)       | Naming patterns, organization, and design patterns                    |
-| [BEST-PRACTICES.md](./documentation/english/BEST-PRACTICES.md) | SOLID, error handling, tests, security, and current risks             |
-| [PREREQUISITES.md](./documentation/english/PREREQUISITES.md)   | System dependencies, tools, database, and hardware                    |
-| [EXECUTION.md](./documentation/english/EXECUTION.md)           | Local setup, environment variables, migrations, endpoints, and deploy |
-
-## General Structure
-
-```text
-ubs-system/
-├── glicodata/            # Laravel 12 application
-│   ├── app/              # Controllers, policies, services, repositories, models, providers, and utils
-│   ├── database/         # Migrations, factories, and seeders
-│   ├── resources/        # Blade views and Vite entries
-│   ├── routes/           # Web routes and API routes; API uses /api prefix
-│   └── tests/            # Feature and Unit tests
-├── documentation/
-│   ├── english/          # English documentation
-│   └── portuguese/       # Portuguese documentation
-└── README.md             # This file
-```
-
-## Quick Start
-
-With PHP 8.2+, Composer 2, Node.js 20+, and PostgreSQL installed:
-
-```bash
-cd glicodata
-composer install
-npm ci
-cp .env.example .env
-php artisan key:generate
-# Configure PostgreSQL in .env and create the ubs_system database.
-php artisan migrate --seed
-php artisan glicodata:admin-create
-composer run dev
-```
-
-New UBS units request access at `/cadastro/ubs` with CNES and password. The
-account remains pending until an administrator activates it at `/admin/ubs`.
-For a terminal password reset, run `php artisan glicodata:ubs-password 1234567`.
-
-The PHP extensions `dom`, `xml`, `mbstring`, `pdo_pgsql`, and `pdo_sqlite` are
-required. See the [full execution guide](./documentation/english/EXECUTION.md)
-for system packages, PostgreSQL configuration, and local credential provisioning.
-
-## Sessions
-
-codex resume 019e171c-5e24-7371-b4cb-30138e1839c2
-019e1f24-9624-7022-bf2d-8ab1571cb629
-
-Credenciais de desenvolvimento e homologacao devem ser provisionadas pelos
-comandos interativos documentados e nunca registradas no repositorio.
+See the [English execution guide](./documentation/english/EXECUTION.md).
