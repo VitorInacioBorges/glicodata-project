@@ -62,8 +62,7 @@
                         Senhas são armazenadas somente como hashes não reversíveis.
                     </div>
 
-                    <a class="small mt-4" href="{{ route('user.login') }}">Acesso individual do profissional</a>
-                    <a class="small mt-2" href="{{ route('admin.login') }}">Acesso administrativo global</a>
+                    <a class="small mt-4" href="{{ route('admin.login') }}">Acesso administrativo global</a>
                     <a class="small mt-2" href="{{ route('ubs.register') }}">Cadastrar uma UBS</a>
                 </section>
             </div>
