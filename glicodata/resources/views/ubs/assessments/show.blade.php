@@ -1,74 +1,108 @@
 @extends('layouts.app')
-
-@section('title', 'Informações da avaliação')
+@section('title', 'Anamnese')
 @section('protected-navigation', 'true')
-
 @section('content')
     @php
-        $assessments = [
-            '0195e2f1-6b70-7cf0-864d-2f2b43c63001' => ['patient' => 'Maria Aparecida Santos', 'patient_id' => '0195e2f1-6b70-7cf0-864d-2f2b43a41001', 'professional' => 'Ana Martins Ribeiro', 'professional_id' => '0195e2f1-6b70-7cf0-864d-2f2b43b52001', 'date' => '24/05/2026', 'risk' => 'Acompanhamento', 'status' => 'warning', 'symptoms' => 'Tontura ocasional e fadiga relatada.'],
-            '0195e2f1-6b70-7cf0-864d-2f2b43c63002' => ['patient' => 'João Alves Ferreira', 'patient_id' => '0195e2f1-6b70-7cf0-864d-2f2b43a41002', 'professional' => 'Ana Martins Ribeiro', 'professional_id' => '0195e2f1-6b70-7cf0-864d-2f2b43b52001', 'date' => '22/05/2026', 'risk' => 'Rotina', 'status' => 'success', 'symptoms' => 'Sem sinais de agravamento relatados.'],
-            '0195e2f1-6b70-7cf0-864d-2f2b43c63003' => ['patient' => 'Clara Vieira Lima', 'patient_id' => '0195e2f1-6b70-7cf0-864d-2f2b43a41003', 'professional' => 'Carlos de Souza', 'professional_id' => '0195e2f1-6b70-7cf0-864d-2f2b43b52002', 'date' => '18/05/2026', 'risk' => 'Prioridade', 'status' => 'danger', 'symptoms' => 'Necessidade de reavaliação registrada.'],
-        ];
-        $assessment = $assessments[$id] ?? ['patient' => 'Paciente demonstrativo', 'patient_id' => '0195e2f1-6b70-7cf0-864d-2f2b43a41001', 'professional' => 'Profissional demonstrativo', 'professional_id' => '0195e2f1-6b70-7cf0-864d-2f2b43b52001', 'date' => 'Não informado', 'risk' => 'Não informado', 'status' => 'warning', 'symptoms' => 'Não informado.'];
+        $riskClass = match ($assessment->risk?->classification?->value) {
+            'low' => 'success',
+            'moderate' => 'warning',
+            'high' => 'danger',
+            default => 'warning',
+        };
     @endphp
-
     <main id="conteudo" class="gd-page">
-        <a class="btn btn-outline-primary btn-sm mb-4" href="{{ route('ubs.assessments.index') }}">Voltar para avaliações</a>
-
-        <div class="d-flex flex-wrap align-items-start justify-content-between gap-3">
-            <div>
-                <p class="gd-eyebrow">Avaliação clínica</p>
-                <h1 class="gd-heading">Avaliação de {{ $assessment['patient'] }}</h1>
-                <p class="gd-subtitle">Registrada em {{ $assessment['date'] }} por {{ $assessment['professional'] }}.</p>
+        <div class="d-flex flex-wrap justify-content-between gap-3 mb-4">
+            <a class="btn btn-outline-primary btn-sm align-self-start"
+                href="{{ route('ubs.assessments.index') }}">Voltar</a>
+            <div class="d-flex gap-2">
+                @if ($assessment->status->value === 'draft')
+                    <a class="btn btn-primary btn-sm" href="{{ route('ubs.assessments.edit', $assessment) }}">Continuar
+                        preenchimento</a>
+                @endif
+                <form method="POST" action="{{ route('ubs.assessments.destroy', $assessment) }}"
+                    data-confirm="Remover esta anamnese?">
+                    @csrf
+                    @method('DELETE')
+                    <button class="btn btn-outline-danger btn-sm">Remover</button>
+                </form>
             </div>
-            <span class="gd-demo-note">Exibição demonstrativa</span>
         </div>
 
+        <p class="gd-eyebrow">Anamnese {{ $assessment->status->value === 'completed' ? 'concluída' : 'em rascunho' }}</p>
+        <h1 class="gd-heading">{{ $assessment->patient?->name }}</h1>
+        <p class="gd-subtitle">Responsável: {{ $assessment->user?->name }} · iniciada em
+            {{ $assessment->started_at?->format('d/m/Y H:i') ?? $assessment->created_at->format('d/m/Y H:i') }}</p>
         <div class="gd-detail-grid">
-            <section class="gd-panel gd-detail-section" aria-labelledby="assessment-data-title">
-                <h2 id="assessment-data-title">Resumo do registro</h2>
+            <section class="gd-panel gd-detail-section">
+                <h2>Resultado e contexto</h2>
                 <dl class="gd-fields">
                     <div class="gd-field">
-                        <dt>Paciente</dt>
-                        <dd><a href="{{ route('ubs.patients.show', $assessment['patient_id']) }}">{{ $assessment['patient'] }}</a></dd>
+                        <dt>Status</dt>
+                        <dd>{{ $assessment->status->value === 'completed' ? 'Concluída' : 'Rascunho' }}</dd>
                     </div>
                     <div class="gd-field">
-                        <dt>Profissional</dt>
-                        <dd><a href="{{ route('ubs.professionals.show', $assessment['professional_id']) }}">{{ $assessment['professional'] }}</a></dd>
+                        <dt>Questionário</dt>
+                        <dd>{{ $assessment->questionnaireVersion?->questionnaire?->title ?? 'Registro legado' }} ·
+                            v{{ $assessment->questionnaireVersion?->version ?? '-' }}</dd>
                     </div>
                     <div class="gd-field">
-                        <dt>Classificação</dt>
-                        <dd><span class="gd-status gd-status-{{ $assessment['status'] }}">{{ $assessment['risk'] }}</span></dd>
+                        <dt>Sintomas</dt>
+                        <dd>{{ $assessment->symptoms ?: 'Não informados' }}</dd>
                     </div>
                     <div class="gd-field">
-                        <dt>Data</dt>
-                        <dd>{{ $assessment['date'] }}</dd>
+                        <dt>Conclusão</dt>
+                        <dd>{{ $assessment->completed_at?->format('d/m/Y H:i') ?? 'Não concluída' }}</dd>
                     </div>
-                    <div class="gd-field">
-                        <dt>Sintomas registrados</dt>
-                        <dd>{{ $assessment['symptoms'] }}</dd>
-                    </div>
-                    <div class="gd-field">
-                        <dt>Identificador</dt>
-                        <dd class="gd-record-id">{{ $id }}</dd>
-                    </div>
+                    @if ($assessment->risk)
+                        <div class="gd-field">
+                            <dt>Classificação de risco</dt>
+                            <dd>
+                                <span class="gd-status gd-status-{{ $riskClass }}">
+                                    {{ strtoupper($assessment->risk->classification->value) }}
+                                </span>
+                            </dd>
+                        </div>
+                        <div class="gd-field">
+                            <dt>Pontuação / probabilidade</dt>
+                            <dd>{{ $assessment->risk->score }} pontos ·
+                                {{ number_format($assessment->risk->percentage, 0, ',', '.') }}%</dd>
+                        </div>
+                    @endif
                 </dl>
             </section>
-
-            <section class="gd-panel gd-detail-section" aria-labelledby="assessment-actions-title">
-                <h2 id="assessment-actions-title">Registro relacionado</h2>
-                <ol class="gd-timeline">
-                    <li>
-                        <strong>Avaliação realizada</strong>
-                        <span>{{ $assessment['date'] }} - 09:15</span>
-                    </li>
-                    <li>
-                        <strong>Classificação registrada</strong>
-                        <span>{{ $assessment['risk'] }}</span>
-                    </li>
-                </ol>
+            <section class="gd-panel gd-detail-section">
+                <h2>Relatório</h2>
+                @if ($assessment->report)
+                    <p class="fw-semibold">{{ $assessment->report->title }}</p>
+                    <a class="btn btn-outline-primary btn-sm"
+                        href="{{ route('ubs.reports.show', $assessment->report) }}">Abrir relatório</a>
+                @elseif ($assessment->status->value === 'completed')
+                    <p class="text-secondary">Ainda não há relatório para esta conclusão.</p>
+                    <a class="btn btn-primary btn-sm"
+                        href="{{ route('ubs.reports.create', ['assessment_id' => $assessment->id]) }}">Criar relatório</a>
+                @else
+                    <p class="text-secondary">Conclua a anamnese para gerar um relatório.</p>
+                @endif
             </section>
         </div>
+        @if ($assessment->questionnaireVersion)
+            <section class="gd-panel gd-detail-section mt-3">
+                <h2>Respostas registradas</h2>
+                <dl class="gd-fields">
+                    @foreach ($assessment->questionnaireVersion->schema as $question)
+                        @php
+                            $value = ($question['type'] ?? '') === 'computed_age' ? $assessment->patient->age : $assessment->answers[$question['code']] ?? null;
+                            if (($question['type'] ?? '') === 'choice') {
+                                $value = collect($question['options'])->firstWhere('value', $value)['label'] ?? $value;
+                            }
+                        @endphp
+                        <div class="gd-field">
+                            <dt>{{ $question['label'] }}</dt>
+                            <dd>{{ $value ?? 'Não respondida' }}</dd>
+                        </div>
+                    @endforeach
+                </dl>
+            </section>
+        @endif
     </main>
 @endsection
