@@ -1,68 +1,81 @@
 @extends('layouts.app')
 
-@section('title', 'Informações do paciente')
+@section('title', 'Paciente')
 @section('protected-navigation', 'true')
 
 @section('content')
-    @php
-        $patients = [
-            '0195e2f1-6b70-7cf0-864d-2f2b43a41001' => ['name' => 'Maria Aparecida Santos', 'birth' => '12/03/1958', 'cpf' => '***.***.***-41', 'phone' => 'Não informado', 'address' => 'Não informado', 'date' => '24/05/2026', 'professional' => 'Ana Martins Ribeiro'],
-            '0195e2f1-6b70-7cf0-864d-2f2b43a41002' => ['name' => 'João Alves Ferreira', 'birth' => '08/11/1973', 'cpf' => '***.***.***-92', 'phone' => '(42) 99931-4480', 'address' => 'Rua das Acácias, 72', 'date' => '22/05/2026', 'professional' => 'Ana Martins Ribeiro'],
-            '0195e2f1-6b70-7cf0-864d-2f2b43a41003' => ['name' => 'Clara Vieira Lima', 'birth' => '19/07/1986', 'cpf' => '***.***.***-08', 'phone' => '(42) 99945-1022', 'address' => 'Vila Esperança', 'date' => '18/05/2026', 'professional' => 'Carlos de Souza'],
-        ];
-        $patient = $patients[$id] ?? ['name' => 'Paciente demonstrativo', 'birth' => 'Não informado', 'cpf' => 'Não informado', 'phone' => 'Não informado', 'address' => 'Não informado', 'date' => 'Não informado', 'professional' => 'Não informado'];
-    @endphp
-
     <main id="conteudo" class="gd-page">
-        <a class="btn btn-outline-primary btn-sm mb-4" href="{{ route('ubs.patients.index') }}">Voltar para pacientes</a>
-
-        <div class="d-flex flex-wrap align-items-start justify-content-between gap-3">
-            <div>
-                <p class="gd-eyebrow">Paciente</p>
-                <h1 class="gd-heading">{{ $patient['name'] }}</h1>
-                <p class="gd-subtitle">Registro assistencial da unidade autenticada.</p>
+        <div class="d-flex justify-content-between gap-3 mb-4">
+            <a class="btn btn-outline-primary btn-sm" href="{{ route('ubs.patients.index') }}">Voltar</a>
+            <div class="d-flex gap-2">
+                <a class="btn btn-primary btn-sm" href="{{ route('ubs.patients.edit', $patient) }}">Editar</a>
+                <form method="POST" action="{{ route('ubs.patients.destroy', $patient) }}"
+                    data-confirm="Remover este paciente?">
+                    @csrf
+                    @method('DELETE')
+                    <button class="btn btn-outline-danger btn-sm" type="submit">Remover</button>
+                </form>
             </div>
-            <span class="gd-demo-note">Exibição demonstrativa</span>
         </div>
+
+        <p class="gd-eyebrow">Paciente</p>
+        <h1 class="gd-heading">{{ $patient->name }}</h1>
+        <p class="gd-subtitle">Registro assistencial da unidade autenticada.</p>
 
         <div class="gd-detail-grid">
             <section class="gd-panel gd-detail-section" aria-labelledby="patient-data-title">
                 <h2 id="patient-data-title">Informações cadastrais</h2>
                 <dl class="gd-fields">
                     <div class="gd-field">
-                        <dt>Data de nascimento</dt>
-                        <dd>{{ $patient['birth'] }}</dd>
+                        <dt>Nascimento</dt>
+                        <dd>{{ $patient->birth->format('d/m/Y') }} ({{ $patient->age }} anos)</dd>
+                    </div>
+                    <div class="gd-field">
+                        <dt>Sexo</dt>
+                        <dd>{{ $patient->sex ? 'Masculino' : 'Feminino' }}</dd>
                     </div>
                     <div class="gd-field">
                         <dt>CPF</dt>
-                        <dd>{{ $patient['cpf'] }}</dd>
+                        <dd>{{ $patient->cpf }}</dd>
                     </div>
                     <div class="gd-field">
                         <dt>Telefone</dt>
-                        <dd>{{ $patient['phone'] }}</dd>
+                        <dd>{{ $patient->phone ?: 'Não informado' }}</dd>
                     </div>
                     <div class="gd-field">
                         <dt>Endereço</dt>
-                        <dd>{{ $patient['address'] }}</dd>
+                        <dd>{{ $patient->address ?: 'Não informado' }}</dd>
                     </div>
                     <div class="gd-field">
                         <dt>Identificador</dt>
-                        <dd class="gd-record-id">{{ $id }}</dd>
+                        <dd class="gd-record-id">{{ $patient->id }}</dd>
                     </div>
                 </dl>
             </section>
-
             <section class="gd-panel gd-detail-section" aria-labelledby="patient-history-title">
-                <h2 id="patient-history-title">Atendimentos recentes</h2>
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h2 id="patient-history-title" class="mb-0">Anamneses</h2>
+                    <a class="btn btn-outline-primary btn-sm"
+                        href="{{ route('ubs.assessments.create', ['patient_id' => $patient->id]) }}">Iniciar</a>
+                </div>
                 <ol class="gd-timeline">
-                    <li>
-                        <strong>Avaliação registrada</strong>
-                        <span>{{ $patient['date'] }} - {{ $patient['professional'] }}</span>
-                    </li>
-                    <li>
-                        <strong>Cadastro revisado</strong>
-                        <span>02/05/2026 - Unidade</span>
-                    </li>
+                    @forelse ($patient->assessments->sortByDesc('created_at')->take(8) as $assessment)
+                        <li>
+                            <strong>
+                                <a href="{{ route('ubs.assessments.show', $assessment) }}">
+                                    {{ $assessment->status->value === 'completed' ? 'Concluída' : 'Rascunho' }}
+                                </a>
+                            </strong>
+                            <span>
+                                {{ $assessment->created_at->format('d/m/Y H:i') }} · {{ $assessment->user?->name }}
+                            </span>
+                        </li>
+                    @empty
+                        <li>
+                            <strong>Nenhuma anamnese</strong>
+                            <span>Inicie o primeiro preenchimento.</span>
+                        </li>
+                    @endforelse
                 </ol>
             </section>
         </div>
