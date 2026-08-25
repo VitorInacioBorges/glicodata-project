@@ -29,7 +29,7 @@ class RiskCalculator
         foreach ($version->schema ?? [] as $question) {
             $code = (string) ($question['code'] ?? '');
             $type = $question['type'] ?? null;
-            $value = $type === 'computed_age' ? $patient->age : ($answers[$code] ?? null);
+            $value = $answers[$code] ?? null;
 
             if ($type === 'choice') {
                 $option = collect($question['options'] ?? [])->firstWhere('value', $value);
@@ -38,7 +38,7 @@ class RiskCalculator
                 continue;
             }
 
-            if ($type === 'number' || $type === 'computed_age') {
+            if ($type === 'number') {
                 $ranges = $question['ranges'] ?? null;
                 if (isset($question['sex_ranges'])) {
                     $ranges = $question['sex_ranges'][$patient->sex ? 'male' : 'female'] ?? [];
