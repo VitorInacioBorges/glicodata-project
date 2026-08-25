@@ -59,11 +59,11 @@ class UbsModel extends Authenticatable
     }
 
     /**
-     * @return HasMany<UserModel, $this>
+     * @return HasMany<ProfessionalModel, $this>
      */
-    public function users(): HasMany
+    public function professionals(): HasMany
     {
-        return $this->hasMany(UserModel::class, 'ubs_id');
+        return $this->hasMany(ProfessionalModel::class, 'ubs_id');
     }
 
     /**
