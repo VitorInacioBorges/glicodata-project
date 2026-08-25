@@ -10,11 +10,11 @@ Oferecer uma base de API e interface web simples para registrar unidades basicas
 
 ## Objetivos
 
-- **Gestao de UBS**: Cadastro de distritos e unidades basicas de saude com dados de contato, endereco, bairro de referencia e status ativo.
-- **Cadastro Operacional**: Registro de usuarios do sistema e pacientes vinculados a uma UBS.
-- **Autenticacao UBS**: Login da UBS via Keycloak/OpenID, com token Bearer usado nas rotas protegidas da API.
-- **Avaliacoes e Risco**: Modelagem de avaliacoes, respostas, sintomas e classificacao de risco em `low`, `moderate` ou `high`.
-- **Relatorios**: Registro de titulos, descricoes e comentarios associados a uma avaliacao.
+- **Gestao de UBS**: Cadastro publico por CNES, aprovacao administrativa e autoedicao dos dados institucionais da unidade.
+- **Identidade e papeis**: Contas individuais de profissionais e gestores da UBS, com CRM/COREN, UF, especialidade e autoria auditavel.
+- **Autenticacao**: Guards separados para UBS, usuario individual e administrador global; Sanctum usa tokens Bearer de 24 horas.
+- **Anamnese e risco**: Questionario versionado, rascunho, conclusao imutavel e calculo de risco exclusivamente no servidor.
+- **Relatorios**: CRUD real e exportacao estatistica agregada com supressao de grupos pequenos e sem dados pessoais/texto livre.
 - **Base Laravel Evolutiva**: Separacao pragmatica entre controllers, services, repositories e models para evoluir validacao, autenticacao, migrations e testes.
 
 ## Servicos
@@ -22,22 +22,23 @@ Oferecer uma base de API e interface web simples para registrar unidades basicas
 | Servico             | Descricao                                                                                                        |
 | ------------------- | ---------------------------------------------------------------------------------------------------------------- |
 | **Backend API**     | API REST em **Laravel 12** e **PHP 8.2+**, organizada por controllers, services, repositories e Eloquent models. |
-| **Autenticacao**    | Integracao com **Laravel Socialite** e **SocialiteProviders Keycloak** para autenticar UBS via OpenID Connect.   |
-| **Interface Blade** | Views server-side para login UBS, lobby, listagens e telas de detalhe de pacientes, profissionais e avaliacoes. |
-| **Assets**          | Build com **Vite 7**, **Bootstrap 5.3.8**, `laravel-vite-plugin` e Axios inicializado no bootstrap JS.          |
+| **Autenticacao**    | **Laravel Sanctum** para tokens Bearer; guards de sessao separados para UBS, usuarios e administradores globais. |
+| **Interface Blade** | CRUD server-side real de pacientes, equipe, anamneses e relatorios, sempre escopado a UBS.                       |
+| **Assets**          | Build com **Vite 7**, **Bootstrap 5.3.8**, `laravel-vite-plugin` e Axios inicializado no bootstrap JS.           |
 | **Banco de Dados**  | PostgreSQL como banco padrao do projeto; SQLite fica restrito a testes automatizados quando configurado.         |
 
 ## Documentacao Tecnica
 
-| Documento                                                         | Descricao                                                           |
-| ----------------------------------------------------------------- | ------------------------------------------------------------------- |
-| [ARCHITECTURE.md](./documentation/portuguese/ARCHITECTURE.md)     | Fundacao arquitetural, camadas, fluxo de dados e modulos do sistema |
-| [DIRECTORIES.md](./documentation/portuguese/DIRECTORIES.md)       | Mapeamento completo de diretorios e responsabilidades               |
-| [TECHNOLOGIES.md](./documentation/portuguese/TECHNOLOGIES.md)     | Stack, metodologias, dependencias e gerenciamento de dados          |
-| [CONVENTIONS.md](./documentation/portuguese/CONVENTIONS.md)       | Padroes de nomeacao, organizacao e design patterns                  |
-| [BEST-PRACTICES.md](./documentation/portuguese/BEST-PRACTICES.md) | SOLID, tratamento de erros, testes, seguranca e riscos atuais       |
-| [PREREQUISITES.md](./documentation/portuguese/PREREQUISITES.md)   | Dependencias de sistema, ferramentas, banco e hardware              |
-| [EXECUTION.md](./documentation/portuguese/EXECUTION.md)           | Setup local, variaveis de ambiente, migrations, endpoints e deploy  |
+| Documento                                                                 | Descricao                                                           |
+| ------------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| [ARCHITECTURE.md](./documentation/portuguese/ARCHITECTURE.md)             | Fundacao arquitetural, camadas, fluxo de dados e modulos do sistema |
+| [DIRECTORIES.md](./documentation/portuguese/DIRECTORIES.md)               | Mapeamento completo de diretorios e responsabilidades               |
+| [TECHNOLOGIES.md](./documentation/portuguese/TECHNOLOGIES.md)             | Stack, metodologias, dependencias e gerenciamento de dados          |
+| [CONVENTIONS.md](./documentation/portuguese/CONVENTIONS.md)               | Padroes de nomeacao, organizacao e design patterns                  |
+| [BEST-PRACTICES.md](./documentation/portuguese/BEST-PRACTICES.md)         | SOLID, tratamento de erros, testes, seguranca e riscos atuais       |
+| [PREREQUISITES.md](./documentation/portuguese/PREREQUISITES.md)           | Dependencias de sistema, ferramentas, banco e hardware              |
+| [EXECUTION.md](./documentation/portuguese/EXECUTION.md)                   | Setup local, variaveis de ambiente, migrations, endpoints e deploy  |
+| [HOMOLOGACAO-DEPLOY.md](./documentation/portuguese/HOMOLOGACAO-DEPLOY.md) | Evidencias, smoke test PostgreSQL e artefatos de deploy             |
 
 ## Estrutura Geral
 
@@ -55,6 +56,32 @@ ubs-system/
 └── README.md             # Este arquivo
 ```
 
+## Inicio Rapido
+
+Com PHP 8.2+, Composer 2, Node.js 20+ e PostgreSQL instalados:
+
+```bash
+cd glicodata
+composer install
+npm ci
+cp .env.example .env
+php artisan key:generate
+# Configure o PostgreSQL no .env e crie o banco ubs_system.
+php artisan migrate --seed
+php artisan glicodata:admin-create
+composer run dev
+```
+
+Novas UBS solicitam acesso em `/cadastro/ubs` com CNES e senha. A conta fica
+pendente ate um administrador ativa-la em `/admin/ubs`. Para redefinir uma senha
+por terminal, use `php artisan glicodata:ubs-password 1234567`.
+Profissionais entram por `/login/profissional`; contas institucionais criam a
+equipe inicial e nao executam atos clinicos.
+
+As extensoes PHP `dom`, `xml`, `mbstring`, `pdo_pgsql` e `pdo_sqlite` sao
+necessarias. Veja o [guia completo de execucao](./documentation/portuguese/EXECUTION.md)
+para instalar os pacotes de sistema, configurar PostgreSQL e provisionar credenciais locais.
+
 ---
 
 # 💉​ Glicodata Project
@@ -69,22 +96,22 @@ To provide an API and simple web interface foundation for registering basic heal
 
 ## Objectives
 
-- **UBS Management**: Register districts and basic health units with contact data, address, reference neighborhood, and active status.
-- **Operational Registration**: Register system users and patients linked to a UBS unit.
-- **UBS Authentication**: UBS login through Keycloak/OpenID, with Bearer tokens used on protected API routes.
-- **Assessments and Risk**: Model assessments, answers, symptoms, and risk classification as `low`, `moderate`, or `high`.
-- **Reports**: Register titles, descriptions, and comments associated with an assessment.
+- **UBS Management**: Public CNES registration, administrator approval, and self-service institutional profile editing.
+- **Identity and roles**: Individual professional/unit-manager accounts with council registration, state, specialty, and auditable authorship.
+- **Authentication**: Separate UBS, individual-user, and global-administrator guards with 24-hour Sanctum Bearer tokens.
+- **Anamnesis and risk**: Versioned questionnaire, drafts, immutable completion, and server-only risk calculation.
+- **Reports**: Real CRUD and aggregate exports without personal identifiers or free-text clinical content.
 - **Evolvable Laravel Base**: Pragmatic separation between controllers, services, repositories, and models to evolve validation, authentication, migrations, and tests.
 
 ## Services
 
-| Service             | Description                                                                                                                  |
-| ------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| **Backend API**     | REST API built with **Laravel 12** and **PHP 8.2+**, organized by controllers, services, repositories, and Eloquent models.  |
-| **Authentication**  | Integration with **Laravel Socialite** and **SocialiteProviders Keycloak** to authenticate UBS accounts with OpenID Connect. |
-| **Blade Interface** | Server-rendered UBS login, lobby, listing, and detail screens for patients, professionals, and assessments.                  |
-| **Assets**          | Build with **Vite 7**, **Bootstrap 5.3.8**, `laravel-vite-plugin`, and Axios initialized in the JS bootstrap.                |
-| **Database**        | PostgreSQL as the project default database; SQLite is limited to automated tests when configured.                            |
+| Service             | Description                                                                                                                 |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| **Backend API**     | REST API built with **Laravel 12** and **PHP 8.2+**, organized by controllers, services, repositories, and Eloquent models. |
+| **Authentication**  | **Laravel Sanctum** Bearer tokens with separate session guards for UBS, individual users, and global administrators.        |
+| **Blade Interface** | Real server-rendered CRUD for patients, staff, anamneses, and reports, always scoped to a UBS.                              |
+| **Assets**          | Build with **Vite 7**, **Bootstrap 5.3.8**, `laravel-vite-plugin`, and Axios initialized in the JS bootstrap.               |
+| **Database**        | PostgreSQL as the project default database; SQLite is limited to automated tests when configured.                           |
 
 ## Technical Documentation
 
@@ -114,7 +141,34 @@ ubs-system/
 └── README.md             # This file
 ```
 
+## Quick Start
+
+With PHP 8.2+, Composer 2, Node.js 20+, and PostgreSQL installed:
+
+```bash
+cd glicodata
+composer install
+npm ci
+cp .env.example .env
+php artisan key:generate
+# Configure PostgreSQL in .env and create the ubs_system database.
+php artisan migrate --seed
+php artisan glicodata:admin-create
+composer run dev
+```
+
+New UBS units request access at `/cadastro/ubs` with CNES and password. The
+account remains pending until an administrator activates it at `/admin/ubs`.
+For a terminal password reset, run `php artisan glicodata:ubs-password 1234567`.
+
+The PHP extensions `dom`, `xml`, `mbstring`, `pdo_pgsql`, and `pdo_sqlite` are
+required. See the [full execution guide](./documentation/english/EXECUTION.md)
+for system packages, PostgreSQL configuration, and local credential provisioning.
+
 ## Sessions
 
 codex resume 019e171c-5e24-7371-b4cb-30138e1839c2
 019e1f24-9624-7022-bf2d-8ab1571cb629
+
+Credenciais de desenvolvimento e homologacao devem ser provisionadas pelos
+comandos interativos documentados e nunca registradas no repositorio.
