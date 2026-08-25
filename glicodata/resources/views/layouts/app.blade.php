@@ -1,65 +1,103 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
-    <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <meta name="theme-color" content="#08796b">
 
-        <title>@yield('title', 'GlicoData') | GlicoData</title>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#08796b">
 
-        @vite(['resources/css/app.css', 'resources/js/app.js'])
-    </head>
-    <body class="@yield('body-class')">
-        <a class="skip-link" href="#conteudo">Ir para o conteúdo</a>
+    <title>@yield('title', 'GlicoData') | GlicoData</title>
 
-        @if (config('glicodata.auth_disabled'))
-            <div class="alert alert-warning rounded-0 border-0 mb-0 text-center small" role="status">
-                Modo de desenvolvimento: autenticação institucional desativada temporariamente.
-            </div>
-        @endif
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
+</head>
 
-        @hasSection('protected-navigation')
-            <header class="gd-header sticky-top">
-                <nav class="navbar navbar-expand-lg" aria-label="Navegação principal">
-                    <div class="container-fluid px-3 px-md-4 py-2">
-                        <a class="gd-brand" href="{{ route('ubs.lobby') }}" aria-label="GlicoData, início">
-                            <img src="{{ asset('images/glicodata-mark.svg') }}" alt="">
-                            <span><span class="gd-brand-accent">Glico</span>Data</span>
-                        </a>
+<body class="@yield('body-class')">
+    <a class="skip-link" href="#conteudo">Ir para o conteúdo</a>
 
-                        <button class="navbar-toggler gd-navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#gdNavigation" aria-controls="gdNavigation" aria-expanded="false" aria-label="Abrir navegação">
-                            <span class="navbar-toggler-icon"></span>
-                        </button>
+    @hasSection('protected-navigation')
+        @php
+            $individual = auth('user')->user();
+            $unit = $individual?->ubs ?? auth('ubs')->user();
+            $isIndividualSession = $individual !== null;
+        @endphp
+        <header class="gd-header sticky-top">
+            <nav class="navbar navbar-expand-lg" aria-label="Navegação principal">
+                <div class="container-fluid px-3 px-md-4 py-2">
+                    <a class="gd-brand"
+                        href="{{ $isIndividualSession ? route('ubs.patients.index') : route('ubs.lobby') }}"
+                        aria-label="GlicoData, início">
+                        <img src="{{ asset('images/glicodata-mark.svg') }}" alt="">
+                        <span><span class="gd-brand-accent">Glico</span>Data</span>
+                    </a>
 
-                        <div id="gdNavigation" class="collapse navbar-collapse ms-lg-4">
-                            <ul class="navbar-nav gd-nav me-auto my-3 my-lg-0">
+                    <button class="navbar-toggler gd-navbar-toggler" type="button" data-bs-toggle="collapse"
+                        data-bs-target="#gdNavigation" aria-controls="gdNavigation" aria-expanded="false"
+                        aria-label="Abrir navegação">
+                        <span class="navbar-toggler-icon"></span>
+                    </button>
+
+                    <div id="gdNavigation" class="collapse navbar-collapse ms-lg-4">
+                        <ul class="navbar-nav gd-nav me-auto my-3 my-lg-0">
+                            @if ($isIndividualSession)
                                 <li class="nav-item">
-                                    <a @class(['nav-link', 'active' => request()->routeIs('ubs.patients.*')]) href="{{ route('ubs.patients.index') }}">Pacientes</a>
+                                    <a @class(['nav-link', 'active' => request()->routeIs('ubs.patients.*')])
+                                        href="{{ route('ubs.patients.index') }}">Pacientes</a>
+                                </li>
+                            @endif
+                            @if (!$isIndividualSession || $individual->isUnitAdministrator())
+                                <li class="nav-item">
+                                    <a @class([
+                                        'nav-link',
+                                        'active' => request()->routeIs('ubs.professionals.*'),
+                                    ])
+                                        href="{{ route('ubs.professionals.index') }}">Profissionais</a>
+                                </li>
+                            @endif
+                            @if ($isIndividualSession)
+                                <li class="nav-item">
+                                    <a @class([
+                                        'nav-link',
+                                        'active' => request()->routeIs('ubs.assessments.*'),
+                                    ])
+                                        href="{{ route('ubs.assessments.index') }}">Anamneses</a>
                                 </li>
                                 <li class="nav-item">
-                                    <a @class(['nav-link', 'active' => request()->routeIs('ubs.professionals.*')]) href="{{ route('ubs.professionals.index') }}">Profissionais</a>
+                                    <a @class(['nav-link', 'active' => request()->routeIs('ubs.reports.*')])
+                                        href="{{ route('ubs.reports.index') }}">Relatórios</a>
                                 </li>
-                                <li class="nav-item">
-                                    <a @class(['nav-link', 'active' => request()->routeIs('ubs.assessments.*')]) href="{{ route('ubs.assessments.index') }}">Avaliações</a>
-                                </li>
-                            </ul>
+                            @endif
+                        </ul>
 
-                            <div class="gd-session">
-                                <div class="gd-session-unit">
-                                    Unidade autenticada
-                                    <strong>{{ auth('ubs')->user()?->name ?? 'UBS' }}</strong>
-                                </div>
-                                <form action="{{ route('ubs.logout') }}" method="POST">
-                                    @csrf
-                                    <button class="btn btn-outline-primary btn-sm" type="submit">Sair</button>
-                                </form>
+                        <div class="gd-session">
+                            <div class="gd-session-unit">
+                                {{ $isIndividualSession ? $individual->name : 'Unidade autenticada' }}
+                                <strong>{{ $unit?->name ?? 'UBS' }}</strong>
                             </div>
+                            @if (!$isIndividualSession)
+                                <a class="btn btn-outline-primary btn-sm"
+                                    href="{{ route('ubs.profile.edit') }}">Perfil</a>
+                            @endif
+                            <a class="btn btn-outline-primary btn-sm"
+                                href="{{ $isIndividualSession ? route('ubs.user.password.edit') : route('ubs.password.edit') }}">Senha</a>
+                            <form action="{{ $isIndividualSession ? route('ubs.user.logout') : route('ubs.logout') }}"
+                                method="POST">
+                                @csrf
+                                <button class="btn btn-outline-primary btn-sm" type="submit">Sair</button>
+                            </form>
                         </div>
                     </div>
-                </nav>
-            </header>
-        @endif
+                </div>
+            </nav>
+        </header>
+    @endif
 
-        @yield('content')
-    </body>
+    @if (session('status'))
+        <div class="container-fluid gd-flash mt-3" role="status">
+            <div class="alert alert-success mb-0">{{ session('status') }}</div>
+        </div>
+    @endif
+
+    @yield('content')
+</body>
+
 </html>
