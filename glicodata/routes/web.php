@@ -20,10 +20,6 @@ Route::view('/login/admin', 'admin.auth.login')
     ->middleware('guest:admin')
     ->name('admin.login');
 
-Route::view('/login/profissional', 'users.auth.login')
-    ->middleware('guest:user')
-    ->name('user.login');
-
 Route::post('/login', [WebAuthController::class, 'login'])
     ->middleware('throttle:login')
     ->name('login');
@@ -51,17 +47,19 @@ Route::middleware(['auth:ubs', 'auth.session', 'account:ubs'])
             ->name('logout');
     });
 
-Route::middleware(['auth:ubs,user', 'auth.session', 'account:ubs,user'])
+Route::middleware(['auth:ubs', 'auth.session', 'account:ubs'])
     ->prefix('ubs')
     ->name('ubs.')
     ->group(function (): void {
+        Route::get('/profissionais/busca', [ProfessionalWebController::class, 'search'])
+            ->name('professionals.search');
         Route::resource('profissionais', ProfessionalWebController::class)
             ->parameters(['profissionais' => 'id'])
             ->names('professionals')
             ->whereUuid('id');
     });
 
-Route::middleware(['auth:user', 'auth.session', 'account:user'])
+Route::middleware(['auth:ubs', 'auth.session', 'account:ubs'])
     ->prefix('ubs')
     ->name('ubs.')
     ->group(function (): void {
@@ -85,13 +83,6 @@ Route::middleware(['auth:user', 'auth.session', 'account:user'])
             ->names('reports')
             ->whereUuid('id');
 
-        Route::view('/minha-conta/senha', 'auth.password', ['accountType' => 'user'])->name('user.password.edit');
-        Route::put('/minha-conta/senha', [WebAuthController::class, 'changePassword'])
-            ->defaults('accountType', 'user')
-            ->name('user.password.update');
-        Route::post('/logout-profissional', [WebAuthController::class, 'logout'])
-            ->defaults('accountType', 'user')
-            ->name('user.logout');
     });
 
 Route::middleware(['auth:admin', 'auth.session', 'account:admin'])
