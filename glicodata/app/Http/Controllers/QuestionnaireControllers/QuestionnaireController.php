@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\QuestionnaireControllers;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\QuestionnaireVersionResource;
 use App\Models\QuestionnaireVersionModel;
 use App\Services\QuestionnaireServices\QuestionnaireService;
 use Illuminate\Http\JsonResponse;
@@ -18,7 +19,7 @@ class QuestionnaireController extends Controller
     {
         Gate::authorize('viewAny', QuestionnaireVersionModel::class);
 
-        return response()->json($this->service->currentPublished());
+        return response()->json(QuestionnaireVersionResource::make($this->service->currentPublished()));
     }
 
     public function show(string $id): JsonResponse
@@ -26,6 +27,6 @@ class QuestionnaireController extends Controller
         $version = $this->service->currentPublished($id);
         Gate::authorize('view', $version);
 
-        return response()->json($version);
+        return response()->json(QuestionnaireVersionResource::make($version));
     }
 }
