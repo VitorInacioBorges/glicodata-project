@@ -9,7 +9,7 @@ class StoreReportRequest extends ApiFormRequest
 {
     protected function prepareForValidation(): void
     {
-        $this->normalizeStrings(['title', 'description', 'comment']);
+        $this->normalizeStrings(['description']);
     }
 
     /**
@@ -24,9 +24,9 @@ class StoreReportRequest extends ApiFormRequest
                 Rule::exists('assessments', 'id'),
                 Rule::unique('reports', 'assessment_id'),
             ],
-            'title' => ['required', 'string', 'max:255'],
-            'description' => ['required', 'string'],
-            'comment' => ['nullable', 'string'],
+            'description' => ['required', 'string', 'max:10000'],
+            'title' => ['prohibited'],
+            'comment' => ['prohibited'],
         ];
     }
 }
