@@ -22,11 +22,6 @@ class ReportService
         protected AuditEventService $auditService,
     ) {}
 
-    public function getAllReports(int $perPage): LengthAwarePaginator
-    {
-        return $this->repository->paginateReports($this->normalizePerPage($perPage));
-    }
-
     public function getReportsForUbs(int $perPage, string $ubsId): LengthAwarePaginator
     {
         $this->validateId($ubsId);
