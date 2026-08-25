@@ -4,6 +4,7 @@ namespace Database\Factories;
 
 use App\Models\AdministratorModel;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Support\Str;
 
 /**
  * @extends Factory<AdministratorModel>
@@ -18,9 +19,8 @@ class AdministratorFactory extends Factory
     public function definition(): array
     {
         return [
-            'name' => fake()->name(),
-            'email' => fake()->unique()->safeEmail(),
-            'password' => 'StrongPassword!123',
+            'admin_code' => 'ADMIN-'.Str::upper(fake()->unique()->bothify('####??')),
+            'password' => Str::password(32),
             'is_active' => true,
         ];
     }
