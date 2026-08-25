@@ -30,7 +30,7 @@
                 <table class="table gd-table gd-responsive-table align-middle">
                     <thead>
                         <tr>
-                            <th>Título</th>
+                            <th>Relatório</th>
                             <th>Paciente</th>
                             <th>Risco</th>
                             <th>Atualizado</th>
@@ -40,14 +40,14 @@
                     <tbody>
                         @forelse ($reports as $report)
                             <tr>
-                                <td data-label="Título">
-                                    <span class="gd-table-title">{{ $report->title }}</span>
+                                <td data-label="Relatório">
+                                    <span class="gd-table-title">Anamnese concluída</span>
                                     <span class="gd-table-meta">
                                         {{ $report->assessment?->questionnaireVersion?->questionnaire?->code }}
                                         v{{ $report->assessment?->questionnaireVersion?->version }}
                                     </span>
                                 </td>
-                                <td data-label="Paciente">{{ $report->assessment?->patient?->name }}</td>
+                                <td data-label="Paciente">{{ $report->assessment?->patient?->first_name }}</td>
                                 <td data-label="Risco">
                                     {{ strtoupper($report->assessment?->risk?->classification?->value ?? '—') }}
                                 </td>
