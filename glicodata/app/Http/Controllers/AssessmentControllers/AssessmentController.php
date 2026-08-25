@@ -3,19 +3,21 @@
 namespace App\Http\Controllers\AssessmentControllers;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\AssessmentRequests\CompleteAssessmentRequest;
 use App\Http\Requests\AssessmentRequests\StoreAssessmentRequest;
 use App\Http\Requests\AssessmentRequests\UpdateAssessmentRequest;
 use App\Http\Requests\CommonRequests\PaginationRequest;
 use App\Models\AssessmentModel;
 use App\Services\AssessmentServices\AssessmentService;
+use App\Support\TenantContext;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 
 class AssessmentController extends Controller
 {
     public function __construct(
         protected AssessmentService $service,
+        protected TenantContext $tenant,
     ) {}
 
     public function index(PaginationRequest $request): JsonResponse
@@ -24,7 +26,7 @@ class AssessmentController extends Controller
 
         return response()->json($this->service->getAssessmentsForUbs(
             $request->perPage(),
-            (string) Auth::guard('keycloak')->id(),
+            $this->tenant->ubsId($request->user()),
         ));
     }
 
@@ -38,13 +40,23 @@ class AssessmentController extends Controller
 
     public function store(StoreAssessmentRequest $request): JsonResponse
     {
-        $ubsId = (string) Auth::guard('keycloak')->id();
+        $user = $this->tenant->user($request->user());
+        $ubsId = (string) $user->ubs_id;
         Gate::authorize('create', [AssessmentModel::class, $ubsId]);
 
         return response()->json($this->service->createAssessment([
             ...$request->validated(),
             'ubs_id' => $ubsId,
+            'user_id' => (string) $user->id,
         ]), 201);
+    }
+
+    public function complete(CompleteAssessmentRequest $request, string $id): JsonResponse
+    {
+        $assessment = $this->service->getAssessmentById($id);
+        Gate::authorize('complete', $assessment);
+
+        return response()->json($this->service->completeAssessment($id, $request->validated()));
     }
 
     public function update(UpdateAssessmentRequest $request, string $id): JsonResponse
