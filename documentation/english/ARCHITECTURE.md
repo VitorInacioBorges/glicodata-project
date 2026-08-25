@@ -9,7 +9,7 @@ This choice addresses three core needs of this project:
 1. **Resource organization**: districts, UBS units, users, patients, assessments, risks, reports, and audit events follow explicit application flows.
 2. **Input boundary**: Laravel Form Requests normalize and validate HTTP payloads before services receive data.
 3. **Application rule reuse**: UUID and email lookup checks, tenant rules, transactions, logical deletion, and audit recording live in services instead of controllers or repositories.
-4. **UBS-scoped access control**: the API uses Keycloak/OpenID to authenticate the UBS account and policies to limit access to unit data; the `audit-admin` client role governs institutional administration and global audit access.
+4. **UBS-scoped access control**: the API uses Sanctum; a separate `AdministratorModel` governs institutional administration without automatic clinical access.
 
 On the web interface side, the architecture uses **Blade templates** with a base layout, UBS screens, and Vite-compiled assets. Bootstrap is imported from npm in `resources/css/app.css` and `resources/js/app.js`, and navigation SVGs live under `public/images`.
 
@@ -24,8 +24,8 @@ On the web interface side, the architecture uses **Blade templates** with a base
 └──────────────────────────────┬──────────────────────────────┘
                                │
 ┌──────────────────────────────▼──────────────────────────────┐
-│                    Keycloak Auth / Policies                 │
-│  keycloak guard resolves UBS and Gates authorize by entity  │
+│                     Sanctum / Policies                      │
+│  Bearer resolves UBS/admin and Gates authorize by entity    │
 └──────────────────────────────┬──────────────────────────────┘
                                │
 ┌──────────────────────────────▼──────────────────────────────┐
@@ -64,7 +64,7 @@ On the web interface side, the architecture uses **Blade templates** with a base
                                │
 ┌──────────────────────────────▼──────────────────────────────┐
 │                  resources/views/layouts/app.blade.php      │
-│  Base layout, UBS navigation, and local-bypass warning      │
+│  Base layout, UBS navigation, and secure Laravel sessions   │
 └──────────────────────────────┬──────────────────────────────┘
                                │
 ┌──────────────────────────────▼──────────────────────────────┐
@@ -81,7 +81,7 @@ On the web interface side, the architecture uses **Blade templates** with a base
 
 ```text
 1. Client sends POST /api/patients with JSON body and Authorization: Bearer <token>.
-2. The keycloak guard validates the token in Keycloak and resolves the active UBS.
+2. Sanctum validates the token hash and expiration and resolves the active UBS.
 3. Laravel routes the request to PatientControllers\PatientController@store.
 4. StorePatientRequest validates CPF and birth date and normalizes blank address/phone input to `null`; the controller uses `$request->validated()`.
 5. Controller injects the authenticated `ubs_id` and authorizes the operation with PatientPolicy.
@@ -103,27 +103,26 @@ On the web interface side, the architecture uses **Blade templates** with a base
 7. If authorized, the model is serialized as JSON.
 ```
 
-### API: UBS Login Through Keycloak
+### API: Password Login and Sanctum Issuance
 
 ```text
-1. Client opens GET /api/auth/ubs/login.
-2. UbsAuthController redirects to the Keycloak provider through Socialite.
-3. Keycloak authenticates the institutional UBS account.
-4. Callback GET /api/auth/ubs/callback receives the authenticated user.
-5. KeycloakUbsAuthService finds an active UBS by `keycloak_id`, or binds a verified official-email record that is not yet linked.
-6. The first binding is audited and the service derives the `audit-admin` client role from the verified token.
-7. API returns access_token, refresh_token, expires_in, and UBS data.
+1. Client posts account_type, identifier, password, and device_name to /api/auth/login; identifier is CNES for UBS and email for administrators.
+2. AuthenticationService searches only the requested account table.
+3. Hash::check validates the local password and active state.
+4. Sanctum stores only a SHA-256 token hash with a 24-hour expiration and ubs/admin ability.
+5. Plaintext is returned once and each account keeps at most 20 active tokens.
+6. Policies and EnsureAccountType separate UBS and global administrator permissions.
 ```
 
 ### Web: UBS Login and Navigation
 
 ```text
-1. Client opens GET /login.
-2. The route renders resources/views/ubs/auth/login.blade.php or redirects to /ubs/lobby when a session already exists.
-3. The institutional access link calls GET /auth/ubs/redirect.
-4. UbsAuthController uses `KEYCLOAK_WEB_REDIRECT_URI` to authenticate in Keycloak and create an `auth:ubs` session.
-5. The /ubs/lobby, /ubs/pacientes, /ubs/profissionais, and /ubs/avaliacoes pages use the shared Blade layout.
-6. In local development, `GLICODATA_AUTH_DISABLED=true` temporarily removes the `auth:ubs` middleware from those pages.
+1. Client opens GET /login/ubs or GET /login/admin.
+2. Both forms post an explicit account_type, identifier, password, and CSRF token to /login.
+3. WebAuthController uses AuthenticationService and creates an `ubs` or `admin` guard session.
+4. The session ID is regenerated and `auth.session` invalidates sessions after password changes.
+5. UBS pages use `auth:ubs`; the administrator dashboard uses `auth:admin`.
+6. Logout invalidates the session and regenerates the CSRF token.
 ```
 
 ---
@@ -163,7 +162,8 @@ There are no formal repository interfaces at the moment. The current separation 
 | Module       | Responsibility                                                                                                           |
 | ------------ | ------------------------------------------------------------------------------------------------------------------------ |
 | `District`   | Read-only institutional district catalog for UBS units.                                                                  |
-| `Ubs`        | Institutional unit contact/activation data administered by the Keycloak `audit-admin` role.                             |
+| `Ubs`        | Institutional tenant; contact and activation data are maintained by global administrators.                            |
+| `Administrator` | Separate global identity for UBS and audit administration.                                                          |
 | `User`       | UBS-linked `professional` (doctor/nurse) or `admin` profile with optional contact data and logical deletion.            |
 | `Patient`    | UBS-linked patient with optional contact data, stored birth date, calculated age, and logical deletion.                 |
 | `Assessment` | UBS assessment associated through `user_id` with a same-unit executor, either `professional` or `admin`.                |
