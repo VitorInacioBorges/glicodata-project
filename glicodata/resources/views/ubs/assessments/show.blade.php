@@ -29,8 +29,9 @@
         </div>
 
         <p class="gd-eyebrow">Anamnese {{ $assessment->status->value === 'completed' ? 'concluída' : 'em rascunho' }}</p>
-        <h1 class="gd-heading">{{ $assessment->patient?->name }}</h1>
-        <p class="gd-subtitle">Responsável: {{ $assessment->user?->name }} · iniciada em
+        <h1 class="gd-heading">{{ $assessment->patient?->first_name }}</h1>
+        <p class="gd-subtitle">Responsável: {{ $assessment->professional?->first_name }}
+            ({{ $assessment->professional?->specialty }}) · iniciada em
             {{ $assessment->started_at?->format('d/m/Y H:i') ?? $assessment->created_at->format('d/m/Y H:i') }}</p>
         <div class="gd-detail-grid">
             <section class="gd-panel gd-detail-section">
@@ -44,10 +45,6 @@
                         <dt>Questionário</dt>
                         <dd>{{ $assessment->questionnaireVersion?->questionnaire?->title ?? 'Registro legado' }} ·
                             v{{ $assessment->questionnaireVersion?->version ?? '-' }}</dd>
-                    </div>
-                    <div class="gd-field">
-                        <dt>Sintomas</dt>
-                        <dd>{{ $assessment->symptoms ?: 'Não informados' }}</dd>
                     </div>
                     <div class="gd-field">
                         <dt>Conclusão</dt>
@@ -73,7 +70,7 @@
             <section class="gd-panel gd-detail-section">
                 <h2>Relatório</h2>
                 @if ($assessment->report)
-                    <p class="fw-semibold">{{ $assessment->report->title }}</p>
+                    <p class="fw-semibold">Relatório da anamnese</p>
                     <a class="btn btn-outline-primary btn-sm"
                         href="{{ route('ubs.reports.show', $assessment->report) }}">Abrir relatório</a>
                 @elseif ($assessment->status->value === 'completed')
@@ -91,7 +88,7 @@
                 <dl class="gd-fields">
                     @foreach ($assessment->questionnaireVersion->schema as $question)
                         @php
-                            $value = ($question['type'] ?? '') === 'computed_age' ? $assessment->patient->age : $assessment->answers[$question['code']] ?? null;
+                            $value = $assessment->answers[$question['code']] ?? null;
                             if (($question['type'] ?? '') === 'choice') {
                                 $value = collect($question['options'])->firstWhere('value', $value)['label'] ?? $value;
                             }
