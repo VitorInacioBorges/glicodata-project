@@ -5,11 +5,11 @@ use App\Http\Controllers\AuditEventControllers\AuditEventController;
 use App\Http\Controllers\AuthControllers\ApiAuthController;
 use App\Http\Controllers\DistrictControllers\DistrictController;
 use App\Http\Controllers\PatientControllers\PatientController;
+use App\Http\Controllers\ProfessionalControllers\ProfessionalController;
 use App\Http\Controllers\QuestionnaireControllers\QuestionnaireController;
 use App\Http\Controllers\ReportControllers\ReportController;
 use App\Http\Controllers\RiskControllers\RiskController;
 use App\Http\Controllers\UbsControllers\UbsController;
-use App\Http\Controllers\UserControllers\UserController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('auth/login', [ApiAuthController::class, 'login'])
@@ -21,7 +21,7 @@ Route::middleware('auth:sanctum')->group(function (): void {
     // was deactivated, so the credential can always be revoked explicitly.
     Route::post('auth/logout', [ApiAuthController::class, 'logout'])->name('auth.logout');
 
-    Route::middleware('account:ubs,user,admin')->group(function (): void {
+    Route::middleware('account:ubs,admin')->group(function (): void {
         Route::get('auth/me', [ApiAuthController::class, 'me'])->name('auth.me');
         Route::put('auth/password', [ApiAuthController::class, 'changePassword'])->name('auth.password');
     });
@@ -46,14 +46,12 @@ Route::middleware('auth:sanctum')->group(function (): void {
         Route::post('ubs', [UbsController::class, 'store'])->name('ubs.store');
     });
 
-    // A conta institucional ou um gestor individual podem administrar a equipe.
-    Route::middleware('account:ubs,user')->group(function (): void {
-        Route::apiResource('users', UserController::class)
-            ->parameters(['users' => 'id']);
-    });
+    Route::middleware('account:ubs')->group(function (): void {
+        Route::get('professionals/search', [ProfessionalController::class, 'search'])
+            ->name('professionals.search');
+        Route::apiResource('professionals', ProfessionalController::class)
+            ->parameters(['professionals' => 'id']);
 
-    // Dados clínicos exigem um ator individual; o tenant vem de user.ubs_id.
-    Route::middleware('account:user')->group(function (): void {
         Route::apiResource('patients', PatientController::class)
             ->parameters(['patients' => 'id']);
 
