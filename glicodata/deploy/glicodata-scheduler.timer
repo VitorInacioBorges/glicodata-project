@@ -1,0 +1,10 @@
+[Unit]
+Description=Agenda o scheduler do GlicoData a cada minuto
+
+[Timer]
+OnCalendar=*-*-* *:*:00
+Persistent=true
+Unit=glicodata-scheduler.service
+
+[Install]
+WantedBy=timers.target
