@@ -4,6 +4,7 @@
 
 namespace App\Models;
 
+use App\Enums\AssessmentStatus;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -20,8 +21,12 @@ class AssessmentModel extends Model
         'patient_id',
         'user_id',
         'ubs_id',
+        'questionnaire_version_id',
         'symptoms',
         'answers',
+        'status',
+        'started_at',
+        'completed_at',
     ];
 
     protected $table = 'assessments';
@@ -33,6 +38,9 @@ class AssessmentModel extends Model
     {
         return [
             'answers' => 'array',
+            'status' => AssessmentStatus::class,
+            'started_at' => 'immutable_datetime',
+            'completed_at' => 'immutable_datetime',
         ];
     }
 
@@ -58,6 +66,11 @@ class AssessmentModel extends Model
     public function ubs(): BelongsTo
     {
         return $this->belongsTo(UbsModel::class, 'ubs_id');
+    }
+
+    public function questionnaireVersion(): BelongsTo
+    {
+        return $this->belongsTo(QuestionnaireVersionModel::class, 'questionnaire_version_id');
     }
 
     /**
