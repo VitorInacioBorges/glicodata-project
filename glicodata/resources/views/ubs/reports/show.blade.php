@@ -17,11 +17,11 @@
         </div>
 
         <p class="gd-eyebrow">Relatório clínico</p>
-        <h1 class="gd-heading">{{ $report->title }}</h1>
+        <h1 class="gd-heading">Relatório da anamnese</h1>
         <p class="gd-subtitle">
             Paciente:
             <a href="{{ route('ubs.patients.show', $report->assessment->patient) }}">
-                {{ $report->assessment->patient->name }}
+                {{ $report->assessment->patient->first_name }}
             </a>
             ·
             <a href="{{ route('ubs.assessments.show', $report->assessment) }}">ver anamnese</a>
@@ -37,7 +37,8 @@
                 <dl class="gd-fields">
                     <div class="gd-field">
                         <dt>Profissional</dt>
-                        <dd>{{ $report->assessment->user?->name }}</dd>
+                        <dd>{{ $report->assessment->professional?->first_name }} ·
+                            {{ $report->assessment->professional?->specialty }}</dd>
                     </div>
                     <div class="gd-field">
                         <dt>Risco</dt>
@@ -49,10 +50,6 @@
                     <div class="gd-field">
                         <dt>Criado</dt>
                         <dd>{{ $report->created_at->format('d/m/Y H:i') }}</dd>
-                    </div>
-                    <div class="gd-field">
-                        <dt>Comentário interno</dt>
-                        <dd>{{ $report->comment ?: 'Não informado' }}</dd>
                     </div>
                 </dl>
             </section>
