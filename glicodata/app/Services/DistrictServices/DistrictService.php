@@ -7,6 +7,7 @@ use App\Repositories\DistrictRepositories\DistrictRepository;
 use App\Utils\ValidateUtils;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Support\Collection;
 
 class DistrictService
 {
@@ -32,6 +33,14 @@ class DistrictService
         }
 
         return $district;
+    }
+
+    /**
+     * @return Collection<int, DistrictModel>
+     */
+    public function getDistrictOptions(): Collection
+    {
+        return $this->repository->allDistricts();
     }
 
     private function normalizePerPage(int $perPage): int
