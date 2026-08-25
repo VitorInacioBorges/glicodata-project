@@ -24,8 +24,8 @@
                     <thead>
                         <tr>
                             <th>Paciente</th>
-                            <th>Nascimento</th>
-                            <th>CPF</th>
+                            <th>Bairro</th>
+                            <th>Logradouro</th>
                             <th>Anamneses</th>
                             <th></th>
                         </tr>
@@ -34,13 +34,10 @@
                         @forelse ($patients as $patient)
                             <tr>
                                 <td data-label="Paciente">
-                                    <span class="gd-table-title">{{ $patient->name }}</span>
-                                    <span class="gd-table-meta">{{ $patient->phone ?: 'Sem telefone' }}</span>
+                                    <span class="gd-table-title">{{ $patient->first_name }}</span>
                                 </td>
-                                <td data-label="Nascimento">
-                                    {{ $patient->birth->format('d/m/Y') }} ({{ $patient->age }} anos)
-                                </td>
-                                <td data-label="CPF">***.***.***-{{ substr($patient->cpf, -2) }}</td>
+                                <td data-label="Bairro">{{ $patient->neighborhood }}</td>
+                                <td data-label="Logradouro">{{ $patient->street_name ?: 'Não informado' }}</td>
                                 <td data-label="Anamneses">{{ $patient->assessments_count }}</td>
                                 <td class="text-md-end">
                                     <a class="btn btn-outline-primary btn-sm"
