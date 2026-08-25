@@ -15,15 +15,14 @@ class CredentialCommandsTest extends TestCase
     public function test_administrator_is_created_without_a_plaintext_password(): void
     {
         $this->artisan('glicodata:admin-create', [
-            '--name' => 'Administrador Teste',
-            '--email' => 'ADMIN@EXAMPLE.COM',
+            'admin_code' => 'ADMIN_TESTE',
         ])
             ->expectsQuestion('Senha', 'StrongPassword!123')
             ->expectsQuestion('Confirme a senha', 'StrongPassword!123')
             ->assertSuccessful();
 
         $administrator = AdministratorModel::query()->sole();
-        $this->assertSame('admin@example.com', $administrator->email);
+        $this->assertSame('ADMIN_TESTE', $administrator->admin_code);
         $this->assertNotSame('StrongPassword!123', $administrator->password);
         $this->assertTrue(Hash::check('StrongPassword!123', $administrator->password));
     }
