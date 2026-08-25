@@ -17,9 +17,7 @@ class ReportModel extends Model
 
     protected $fillable = [
         'assessment_id',
-        'comment',
         'description',
-        'title',
     ];
 
     protected $table = 'reports';
