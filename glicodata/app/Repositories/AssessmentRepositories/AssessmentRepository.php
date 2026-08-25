@@ -9,8 +9,7 @@ class AssessmentRepository
 {
     public function __construct(
         protected AssessmentModel $model,
-    ) {
-    }
+    ) {}
 
     public function paginateAssessments(int $perPage): LengthAwarePaginator
     {
@@ -21,16 +20,20 @@ class AssessmentRepository
     {
         return $this->model->newQuery()
             ->where('ubs_id', $ubsId)
+            ->with(['patient', 'user', 'risk', 'report', 'questionnaireVersion.questionnaire'])
+            ->latest()
             ->paginate($perPage);
     }
 
     public function findAssessmentById(string $id): ?AssessmentModel
     {
-        return $this->model->newQuery()->find($id);
+        return $this->model->newQuery()
+            ->with(['patient', 'user', 'risk', 'report', 'questionnaireVersion.questionnaire'])
+            ->find($id);
     }
 
     /**
-     * @param array<string, mixed> $data
+     * @param  array<string, mixed>  $data
      */
     public function createAssessment(array $data): AssessmentModel
     {
