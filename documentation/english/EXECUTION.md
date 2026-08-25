@@ -11,9 +11,31 @@ cd ubs-system/glicodata
 
 ### 2. Install Dependencies
 
+On Ubuntu, install the runtimes, PostgreSQL, and the PHP extensions required by
+Composer, the application, and the test suite:
+
+```bash
+sudo apt update
+sudo apt install php-cli php-curl php-intl php-mbstring php-pgsql \
+  php-sqlite3 php-xml php-zip composer \
+  nodejs npm postgresql postgresql-client
+```
+
+Check the environment before continuing:
+
+```bash
+php -v
+composer --version
+node --version
+php -m | grep -E 'dom|mbstring|pdo_pgsql|pdo_sqlite|xml'
+pg_isready
+```
+
+Install exactly the versions recorded in the lockfiles:
+
 ```bash
 composer install
-npm install
+npm ci
 ```
 
 ### 3. Configure Environment Variables
@@ -33,7 +55,7 @@ Configure the local database in `.env`.
 DB_CONNECTION=pgsql
 DB_HOST=127.0.0.1
 DB_PORT=5432
-DB_DATABASE=ubs_system
+DB_DATABASE=glicodata_db
 DB_USERNAME=postgres
 DB_PASSWORD=your_password
 ```
@@ -41,30 +63,29 @@ DB_PASSWORD=your_password
 Create the database before running migrations:
 
 ```bash
-createdb ubs_system
+sudo systemctl enable --now postgresql
+createdb -h 127.0.0.1 -U postgres glicodata_db
 ```
 
-#### Keycloak / OpenID
+If your PostgreSQL installation uses local `peer` authentication, create the
+database with `sudo -u postgres createdb glicodata_db` and set a password for the
+user configured in `.env`.
 
-Configure the UBS authentication provider:
+#### Local authentication and Sanctum
+
+Configure Argon2id hashes, sessions, and 24-hour tokens:
 
 ```env
-KEYCLOAK_CLIENT_ID=your_client_id
-KEYCLOAK_CLIENT_SECRET=your_client_secret
-KEYCLOAK_REDIRECT_URI="${APP_URL}/api/auth/ubs/callback"
-KEYCLOAK_WEB_REDIRECT_URI="${APP_URL}/auth/ubs/callback"
-KEYCLOAK_BASE_URL=https://keycloak.example
-KEYCLOAK_REALM=your_realm
+HASH_DRIVER=argon2id
+HASH_VERIFY=false
+SANCTUM_EXPIRATION=1440
+SESSION_DRIVER=database
+SESSION_LIFETIME=1440
+SESSION_ENCRYPT=true
+SESSION_SECURE_COOKIE=true
 ```
 
-To temporarily work on design and API calls without a configured local Keycloak provider:
-
-```env
-GLICODATA_AUTH_DISABLED=true
-GLICODATA_AUTH_BYPASS_UBS_EMAIL=
-```
-
-This mode opens UBS web routes and makes the `keycloak` guard resolve one active local UBS. Never enable it in staging or production.
+Use `SESSION_SECURE_COOKIE=false` only for local HTTP development. There is no authentication bypass.
 
 ### 4. Run Migrations
 
@@ -72,7 +93,7 @@ This mode opens UBS web routes and makes the `keycloak` guard resolve one active
 php artisan migrate
 ```
 
-Observation: SQLite remains configured in `phpunit.xml` only for in-memory automated tests.
+Migrations load only the five institutional districts and never create UBS accounts or credentials. The incremental cleanup irreversibly deletes the 42 legacy catalog UBS records and every linked clinical/audit record; take and verify a PostgreSQL backup before deploying it. SQLite remains configured in `phpunit.xml` only for in-memory automated tests.
 
 ### 5. Run Seeders
 
@@ -80,9 +101,16 @@ Observation: SQLite remains configured in `phpunit.xml` only for in-memory autom
 php artisan db:seed
 ```
 
-The current seeder creates a district, a test UBS with `keycloak_id = ubs-teste-keycloak-id`, and an operational user with `test@example.com`.
+The default seeder does not create UBS accounts, users, or credentials. Automated tests use isolated factories. To reset an existing UBS password by CNES:
+
+```bash
+php artisan glicodata:admin-create
+php artisan glicodata:ubs-password 1234567
+```
 
 ### 6. Start in Development Mode
+
+Use the interactive commands above for local credentials; passwords are never accepted as command arguments.
 
 #### Laravel
 
@@ -134,28 +162,31 @@ This script runs in parallel:
 
 ### PHP / Composer (`glicodata/composer.json`)
 
-| Script | Command | Description |
-| --- | --- | --- |
-| `setup` | `composer install`, copy `.env`, generate key, run migrate, install npm, and build | Automated initial setup. |
-| `dev` | `concurrently` with Laravel server, queue, pail, and Vite | Full development environment. |
-| `test` | `php artisan config:clear --ansi` and `php artisan test` | Runs Laravel tests. |
+| Script  | Command                                                                            | Description                   |
+| ------- | ---------------------------------------------------------------------------------- | ----------------------------- |
+| `setup` | `composer install`, copy `.env`, generate key, run migrate, install npm, and build | Automated initial setup.      |
+| `dev`   | `concurrently` with Laravel server, queue, pail, and Vite                          | Full development environment. |
+| `test`  | `php artisan config:clear --ansi` and `php artisan test`                           | Runs Laravel tests.           |
+
+The `composer setup` script assumes PostgreSQL and `.env` are already configured
+because it runs migrations. For a first installation, follow this guide in order.
 
 ### JavaScript (`glicodata/package.json`)
 
-| Script | Command | Description |
-| --- | --- | --- |
-| `dev` | `vite` | Starts the asset dev server. |
-| `build` | `vite build` | Generates production build. |
+| Script  | Command      | Description                  |
+| ------- | ------------ | ---------------------------- |
+| `dev`   | `vite`       | Starts the asset dev server. |
+| `build` | `vite build` | Generates production build.  |
 
 ### Artisan
 
-| Command | Description |
-| --- | --- |
+| Command                  | Description              |
+| ------------------------ | ------------------------ |
 | `php artisan route:list` | Lists registered routes. |
-| `php artisan migrate` | Runs pending migrations. |
-| `php artisan db:seed` | Runs seeders. |
-| `php artisan test` | Runs tests. |
-| `php artisan tinker` | Opens Laravel REPL. |
+| `php artisan migrate`    | Runs pending migrations. |
+| `php artisan db:seed`    | Runs seeders.            |
+| `php artisan test`       | Runs tests.              |
+| `php artisan tinker`     | Opens Laravel REPL.      |
 
 ---
 
@@ -163,41 +194,46 @@ This script runs in parallel:
 
 All endpoints below use the `/api` prefix.
 
-| Method | Route | Controller |
-| --- | --- | --- |
-| `GET` | `/auth/ubs/login` | `UbsAuthController@redirect` |
-| `GET` | `/auth/ubs/callback` | `UbsAuthController@callback` |
-| `GET` | `/auth/ubs/me` | `UbsAuthController@me` |
-| `GET` | `/auth/ubs/logout` | `UbsAuthController@logout` |
-| `GET` | `/districts` | `DistrictController@index` |
-| `GET` | `/districts/{id}` | `DistrictController@show` |
-| `GET` | `/ubs` and `/ubs/{id}` | `UbsController@index/show` |
-| `PUT/PATCH` | `/ubs/{id}` | `UbsController@update`, restricted to `audit-admin` |
-| `apiResource` | `/users`, `/patients`, `/assessments`, `/risks`, `/reports` | Operational CRUD with logical delete on destroy |
-| `GET` | `/audit-events` and `/audit-events/{id}` | `AuditEventController@index/show` |
-| `POST` | `/audit-events/{id}/redact` | `AuditEventController@redact`, restricted to `audit-admin` |
+| Method        | Route                                                       | Controller                                                 |
+| ------------- | ----------------------------------------------------------- | ---------------------------------------------------------- |
+| `POST`        | `/auth/login`                                               | UBS/admin login and Sanctum token issuance                 |
+| `GET`         | `/auth/me`                                                  | Returns the token identity                                 |
+| `POST`        | `/auth/logout`                                              | Revokes the current token                                  |
+| `PUT`         | `/auth/password`                                            | Changes password and revokes every token                   |
+| `GET`         | `/districts`                                                | `DistrictController@index`                                 |
+| `GET`         | `/districts/{id}`                                           | `DistrictController@show`                                  |
+| `POST`        | `/ubs`                                                       | Administrator creates a pending UBS by CNES                 |
+| `GET`         | `/ubs` and `/ubs/{id}`                                      | `UbsController@index/show`                                 |
+| `PUT/PATCH`   | `/ubs/{id}`                                                 | Admin manages any UBS; UBS updates only its own profile     |
+| `apiResource` | `/users`, `/patients`, `/assessments`, `/risks`, `/reports` | Operational CRUD with logical delete on destroy            |
+| `GET`         | `/audit-events` and `/audit-events/{id}`                    | `AuditEventController@index/show`                          |
+| `POST`        | `/audit-events/{id}/redact`                                 | `AuditEventController@redact`, restricted to administrators |
 
-Every route above except `/api/auth/ubs/login` and `/api/auth/ubs/callback` requires:
+Every route above except `POST /api/auth/login` requires:
 
 ```http
-Authorization: Bearer <keycloak_token>
+Authorization: Bearer <sanctum_token>
 ```
 
-With `GLICODATA_AUTH_DISABLED=true` in a local environment, the middleware remains registered, but the `keycloak` guard accepts requests without a Bearer token to ease development.
+The login requires `account_type` (`ubs` or `admin`), `identifier`, password, and device name. `identifier` is the seven-digit CNES for UBS and the email address for administrators. Each account keeps at most 20 active tokens.
 
 Web routes stay outside the `/api` prefix:
 
-| Method | Route | Description |
-| --- | --- | --- |
-| `GET` | `/` | Redirects to `/login`. |
-| `GET` | `/login` | Renders UBS login or redirects to the lobby. |
-| `GET` | `/auth/ubs/redirect` | Starts web Keycloak login. |
-| `GET` | `/auth/ubs/callback` | Receives the web callback and creates the `auth:ubs` session. |
-| `GET` | `/ubs/lobby` | Renders the operational lobby. |
-| `GET` | `/ubs/pacientes*` | Renders patient listing and visual detail screens. |
-| `GET` | `/ubs/profissionais*` | Renders professional listing and visual detail screens. |
-| `GET` | `/ubs/avaliacoes*` | Renders assessment listing and visual detail screens. |
-| `POST` | `/ubs/logout` | Ends the UBS web session. |
+| Method | Route                 | Description                                                   |
+| ------ | --------------------- | ------------------------------------------------------------- |
+| `GET`  | `/`                   | Redirects to `/login/ubs`.                                    |
+| `GET`  | `/login/ubs`          | Renders the UBS login.                                        |
+| `GET`  | `/login/admin`        | Renders the administrator login.                              |
+| `POST` | `/login`              | Creates a session for the explicit account type.              |
+| `GET/POST` | `/cadastro/ubs`     | Public CNES registration; the account remains pending.        |
+| `GET`  | `/ubs/lobby`          | Renders the operational lobby.                                |
+| `GET/PUT` | `/ubs/conta/perfil` | Allows a UBS to maintain its own institutional profile.       |
+| `GET`  | `/ubs/pacientes*`     | Renders patient listing and visual detail screens.            |
+| `GET`  | `/ubs/profissionais*` | Renders professional listing and visual detail screens.       |
+| `GET`  | `/ubs/avaliacoes*`    | Renders assessment listing and visual detail screens.         |
+| `POST` | `/ubs/logout`         | Ends the UBS web session.                                     |
+| `GET`  | `/admin`              | Renders the global administrator dashboard.                   |
+| `GET/PUT` | `/admin/ubs*`      | Lists, reviews, edits, and activates UBS accounts.             |
 
 ---
 
@@ -233,9 +269,13 @@ Use `migrate:fresh` only in local environments or disposable databases because i
 
 ## Tests and Validation
 
-### Test Status
+### Run Tests
 
-The existing tests were not modified or executed in this implementation stage. They require a later testing pass for the new Form Request, `birth`, logical deletion, audit, and Keycloak authorization contracts.
+```bash
+composer test
+```
+
+The test suite uses in-memory SQLite and requires the `pdo_sqlite` extension.
 
 ### Validate Routes
 
@@ -258,7 +298,7 @@ php artisan --version
 Observed result:
 
 ```text
-Laravel Framework 12.60.2
+Laravel Framework 12.67.0
 ```
 
 ---
@@ -271,7 +311,7 @@ The repository does not include a versioned deploy configuration. A minimal flow
 cd /var/www/ubs-system/glicodata
 git pull
 composer install --no-dev --optimize-autoloader
-npm install
+npm ci
 npm run build
 php artisan migrate --force
 php artisan config:cache
@@ -300,8 +340,8 @@ curl -i https://your-domain.example/api
 - Configure `APP_KEY`.
 - Use a persistent PostgreSQL database.
 - Apply this consolidated migration set only to a fresh production database, or prepare reviewed transition migrations for existing data.
-- Provision and restrict the Keycloak client role `audit-admin`.
-- Ensure `GLICODATA_AUTH_DISABLED=false` before caching configuration.
+- Create the first administrator and set UBS passwords with the interactive commands.
+- Use HTTPS, secure session cookies, Argon2id, and run the scheduler for expired Sanctum tokens.
 - Restrict `audit_events` database and backup access because its snapshots may contain personal data; define retention/redaction procedures with NTI.
 - Review and activate UBS catalog entries containing provisional contact information before allowing login.
 - Ensure write permission for `storage/` and `bootstrap/cache/`.
