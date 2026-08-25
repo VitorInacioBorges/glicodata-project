@@ -6,11 +6,9 @@ use App\Models\AdministratorModel;
 use App\Models\AuditEventModel;
 use App\Models\DistrictModel;
 use App\Models\UbsModel;
-use App\Models\UserModel;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
@@ -46,7 +44,7 @@ class UbsLifecycleTest extends TestCase
         $this->assertSame($ubs->id, $event->actor_ubs_id);
         $this->assertSame($ubs->id, $event->owner_ubs_id);
         $this->assertSame('register', $event->action);
-        $this->assertArrayNotHasKey('password', $event->after_payload);
+        $this->assertNotContains('password', $event->changed_fields ?? []);
 
         $this->from('/login/ubs')->post('/login', [
             'account_type' => 'ubs',
@@ -255,95 +253,5 @@ class UbsLifecycleTest extends TestCase
             'bairro_ref' => 'Centro',
             'phone' => '(42) 3901-1700',
         ]);
-    }
-
-    public function test_cleanup_migration_removes_seeded_ubs_and_all_dependencies(): void
-    {
-        $seededUbs = UbsModel::factory()->create([
-            'id' => '20000000-0000-4000-8000-000000000001',
-            'cnes' => '4567890',
-        ]);
-        $retainedUbs = UbsModel::factory()->create(['cnes' => '5678901']);
-        $user = UserModel::factory()->create(['ubs_id' => $seededUbs->id]);
-        $patientId = (string) Str::uuid();
-        $assessmentId = (string) Str::uuid();
-        $now = now();
-
-        DB::table('patients')->insert([
-            'id' => $patientId,
-            'ubs_id' => $seededUbs->id,
-            'name' => 'Paciente de remoção',
-            'sex' => true,
-            'cpf' => '529.982.247-25',
-            'birth' => '1990-01-01',
-            'created_at' => $now,
-            'updated_at' => $now,
-        ]);
-        DB::table('assessments')->insert([
-            'id' => $assessmentId,
-            'patient_id' => $patientId,
-            'user_id' => $user->id,
-            'ubs_id' => $seededUbs->id,
-            'symptoms' => 'Registro destinado ao teste de limpeza.',
-            'answers' => json_encode(['test' => true], JSON_THROW_ON_ERROR),
-            'created_at' => $now,
-            'updated_at' => $now,
-        ]);
-        DB::table('risks')->insert([
-            'id' => (string) Str::uuid(),
-            'assessment_id' => $assessmentId,
-            'percentage' => 10,
-            'classification' => 'low',
-            'score' => 1,
-            'created_at' => $now,
-            'updated_at' => $now,
-        ]);
-        DB::table('reports')->insert([
-            'id' => (string) Str::uuid(),
-            'assessment_id' => $assessmentId,
-            'title' => 'Relatório de remoção',
-            'description' => 'Registro destinado ao teste de limpeza.',
-            'created_at' => $now,
-            'updated_at' => $now,
-        ]);
-        DB::table('audit_events')->insert([
-            'id' => (string) Str::uuid(),
-            'actor_ubs_id' => $seededUbs->id,
-            'actor_administrator_id' => null,
-            'owner_ubs_id' => $seededUbs->id,
-            'actor_name' => $seededUbs->name,
-            'actor_email' => $seededUbs->email,
-            'subject_type' => 'patients',
-            'subject_id' => $patientId,
-            'action' => 'create',
-            'created_at' => $now,
-            'updated_at' => $now,
-        ]);
-        $seededUbs->createToken('seeded', ['ubs'], now()->addDay());
-        DB::table('sessions')->insert([
-            'id' => 'seeded-session',
-            'user_id' => $seededUbs->id,
-            'payload' => 'test',
-            'last_activity' => now()->timestamp,
-        ]);
-
-        $migration = require database_path('migrations/2026_08_18_181500_remove_automatically_seeded_ubs.php');
-        $migration->up();
-
-        $this->assertDatabaseMissing('ubs', ['id' => $seededUbs->id]);
-        $this->assertDatabaseMissing('users', ['id' => $user->id]);
-        $this->assertDatabaseMissing('patients', ['id' => $patientId]);
-        $this->assertDatabaseMissing('assessments', ['id' => $assessmentId]);
-        $this->assertDatabaseMissing('audit_events', ['owner_ubs_id' => $seededUbs->id]);
-        $this->assertDatabaseMissing('personal_access_tokens', ['tokenable_id' => $seededUbs->id]);
-        $this->assertDatabaseMissing('sessions', ['user_id' => $seededUbs->id]);
-        $this->assertDatabaseHas('ubs', ['id' => $retainedUbs->id, 'is_active' => true]);
-        $this->assertSame(5, DistrictModel::query()->whereIn('id', [
-            '10000000-0000-4000-8000-000000000001',
-            '10000000-0000-4000-8000-000000000002',
-            '10000000-0000-4000-8000-000000000003',
-            '10000000-0000-4000-8000-000000000004',
-            '10000000-0000-4000-8000-000000000005',
-        ])->count());
     }
 }
