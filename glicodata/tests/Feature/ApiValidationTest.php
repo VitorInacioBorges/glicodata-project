@@ -2,22 +2,35 @@
 
 namespace Tests\Feature;
 
+use App\Models\UbsModel;
+use App\Models\UserModel;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
+use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
 class ApiValidationTest extends TestCase
 {
     use RefreshDatabase;
 
+    private UbsModel $ubs;
+
     protected function setUp(): void
     {
         if (! extension_loaded('pdo_sqlite')) {
-            $this->markTestSkipped('A extensao pdo_sqlite e necessaria para estes testes com banco em memoria.');
+            $this->markTestSkipped('A extensão pdo_sqlite é necessária para estes testes.');
         }
 
         parent::setUp();
+
+        $this->ubs = UbsModel::factory()->create();
+        Sanctum::actingAs($this->ubs, ['ubs']);
+    }
+
+    public function test_api_users_requires_authentication(): void
+    {
+        auth('sanctum')->forgetUser();
+
+        $this->getJson('/api/users')->assertUnauthorized();
     }
 
     public function test_api_users_index_returns_successful_response(): void
@@ -38,60 +51,12 @@ class ApiValidationTest extends TestCase
 
     public function test_user_update_rejects_invalid_email(): void
     {
-        $userId = $this->createUserRecord();
+        $user = UserModel::factory()->create(['ubs_id' => $this->ubs->id]);
 
-        $this->patchJson("/api/users/{$userId}", [
+        $this->patchJson("/api/users/{$user->id}", [
             'email' => 'email-invalido',
         ])
             ->assertStatus(422)
             ->assertJsonValidationErrors(['email']);
-    }
-
-    private function createUserRecord(): string
-    {
-        $now = now();
-        $districtId = (string) Str::uuid();
-        $ubsId = (string) Str::uuid();
-        $userId = (string) Str::uuid();
-
-        DB::table('districts')->insert([
-            'id' => $districtId,
-            'name' => 'Distrito Teste',
-            'created_at' => $now,
-            'updated_at' => $now,
-        ]);
-
-        DB::table('ubs')->insert([
-            'id' => $ubsId,
-            'district_id' => $districtId,
-            'name' => 'UBS Teste',
-            'bairro_ref' => 'Centro',
-            'address' => 'Rua Teste, 100',
-            'phone' => '42999999999',
-            'email' => 'ubs@example.com',
-            'is_active' => true,
-            'created_at' => $now,
-            'updated_at' => $now,
-        ]);
-
-        DB::table('users')->insert([
-            'id' => $userId,
-            'ubs_id' => $ubsId,
-            'name' => 'Usuario Teste',
-            'age' => 30,
-            'sex' => true,
-            'cpf' => '00000000000',
-            'address' => 'Rua Teste, 200',
-            'phone' => '42988888888',
-            'email' => 'user@example.com',
-            'email_verified_at' => null,
-            'password' => 'password',
-            'role' => 'user',
-            'remember_token' => null,
-            'created_at' => $now,
-            'updated_at' => $now,
-        ]);
-
-        return $userId;
     }
 }
