@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\ProfessionalCouncil;
 use App\Enums\UserRole;
 use App\Models\DistrictModel;
 use App\Models\UbsModel;
@@ -29,13 +30,14 @@ class UserFactory extends Factory
                 ]);
 
                 return UbsModel::query()->create([
+                    'cnes' => fake()->unique()->numerify('#######'),
                     'district_id' => $district->id,
                     'name' => fake()->company(),
                     'bairro_ref' => fake()->streetName(),
                     'address' => fake()->address(),
                     'phone' => fake()->numerify('###########'),
                     'email' => fake()->unique()->safeEmail(),
-                    'keycloak_id' => (string) fake()->uuid(),
+                    'password' => 'StrongPassword!123',
                     'is_active' => true,
                 ])->id;
             },
@@ -47,8 +49,13 @@ class UserFactory extends Factory
             'phone' => fake()->numerify('###########'),
             'email' => fake()->unique()->safeEmail(),
             'email_verified_at' => now(),
-            'password' => null,
-            'role' => fake()->randomElement([UserRole::Admin->value, UserRole::Professional->value]),
+            'password' => 'StrongPassword!123',
+            'role' => UserRole::Professional->value,
+            'is_active' => true,
+            'council_type' => ProfessionalCouncil::Crm->value,
+            'council_number' => fake()->unique()->numerify('######'),
+            'council_uf' => 'PR',
+            'specialty' => fake()->randomElement(['Clínica médica', 'Medicina de família e comunidade', 'Endocrinologia']),
             'remember_token' => Str::random(10),
         ];
     }
@@ -61,6 +68,22 @@ class UserFactory extends Factory
         return $this->state(fn (array $attributes) => [
             'email_verified_at' => null,
         ]);
+    }
+
+    public function unitAdministrator(): static
+    {
+        return $this->state(fn (): array => [
+            'role' => UserRole::Admin->value,
+            'council_type' => null,
+            'council_number' => null,
+            'council_uf' => null,
+            'specialty' => null,
+        ]);
+    }
+
+    public function inactive(): static
+    {
+        return $this->state(fn (): array => ['is_active' => false]);
     }
 
     private function cpf(): string
