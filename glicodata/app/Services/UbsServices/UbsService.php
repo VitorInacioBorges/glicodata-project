@@ -4,7 +4,6 @@ namespace App\Services\UbsServices;
 
 use App\Models\AdministratorModel;
 use App\Models\UbsModel;
-use App\Models\UserModel;
 use App\Repositories\UbsRepositories\UbsRepository;
 use App\Services\AuditEventServices\AuditEventService;
 use App\Utils\ValidateUtils;
@@ -114,15 +113,6 @@ class UbsService
             if ($cnesChanged || ! $ubs->is_active) {
                 $ubs->tokens()->delete();
                 DB::table('sessions')->where('user_id', $ubs->id)->delete();
-            }
-
-            if (! $ubs->is_active) {
-                $userIds = UserModel::withTrashed()->where('ubs_id', $ubs->id)->pluck('id');
-                DB::table('personal_access_tokens')
-                    ->where('tokenable_type', UserModel::class)
-                    ->whereIn('tokenable_id', $userIds)
-                    ->delete();
-                DB::table('sessions')->whereIn('user_id', $userIds)->delete();
             }
 
             $this->auditService->record('update', $ubs, (string) $ubs->id, $before, $ubs->toArray());
