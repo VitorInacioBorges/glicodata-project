@@ -6,20 +6,20 @@ use App\Models\AssessmentModel;
 use App\Models\AuditEventModel;
 use App\Models\DistrictModel;
 use App\Models\PatientModel;
+use App\Models\ProfessionalModel;
 use App\Models\QuestionnaireVersionModel;
 use App\Models\ReportModel;
 use App\Models\RiskModel;
 use App\Models\UbsModel;
-use App\Models\UserModel;
 use App\Policies\AssessmentPolicies\AssessmentPolicy;
 use App\Policies\AuditEventPolicies\AuditEventPolicy;
 use App\Policies\DistrictPolicies\DistrictPolicy;
 use App\Policies\PatientPolicies\PatientPolicy;
+use App\Policies\ProfessionalPolicies\ProfessionalPolicy;
 use App\Policies\QuestionnairePolicies\QuestionnaireVersionPolicy;
 use App\Policies\ReportPolicies\ReportPolicy;
 use App\Policies\RiskPolicies\RiskPolicy;
 use App\Policies\UbsPolicies\UbsPolicy;
-use App\Policies\UserPolicies\UserPolicy;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\Paginator;
@@ -79,7 +79,7 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(RiskModel::class, RiskPolicy::class);
         Gate::policy(QuestionnaireVersionModel::class, QuestionnaireVersionPolicy::class);
         Gate::policy(UbsModel::class, UbsPolicy::class);
-        Gate::policy(UserModel::class, UserPolicy::class);
+        Gate::policy(ProfessionalModel::class, ProfessionalPolicy::class);
 
         // Registra que as migrations dentro de ./migrations/* devem ser rodadas
 
