@@ -8,7 +8,7 @@ class UpdateReportRequest extends ApiFormRequest
 {
     protected function prepareForValidation(): void
     {
-        $this->normalizeStrings(['title', 'description', 'comment']);
+        $this->normalizeStrings(['description']);
     }
 
     /**
@@ -17,9 +17,9 @@ class UpdateReportRequest extends ApiFormRequest
     public function rules(): array
     {
         return [
-            'title' => ['sometimes', 'required', 'string', 'max:255'],
-            'description' => ['sometimes', 'required', 'string'],
-            'comment' => ['sometimes', 'nullable', 'string'],
+            'description' => ['sometimes', 'required', 'string', 'max:10000'],
+            'title' => ['prohibited'],
+            'comment' => ['prohibited'],
         ];
     }
 }
