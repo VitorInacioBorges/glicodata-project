@@ -41,10 +41,12 @@
                             @endphp
                             <tr>
                                 <td data-label="Paciente">
-                                    <span class="gd-table-title">{{ $assessment->patient?->name }}</span>
+                                    <span class="gd-table-title">{{ $assessment->patient?->first_name }}</span>
                                     <span class="gd-table-meta">{{ $assessment->created_at->format('d/m/Y H:i') }}</span>
                                 </td>
-                                <td data-label="Profissional">{{ $assessment->user?->name }}</td>
+                                <td data-label="Profissional">
+                                    {{ $assessment->professional?->first_name }} · {{ $assessment->professional?->specialty }}
+                                </td>
                                 <td data-label="Questionário">
                                     {{ $assessment->questionnaireVersion?->questionnaire?->code ?? 'Legado' }}
                                     v{{ $assessment->questionnaireVersion?->version ?? '-' }}
