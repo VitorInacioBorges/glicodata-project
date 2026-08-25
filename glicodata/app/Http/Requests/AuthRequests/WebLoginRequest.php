@@ -30,7 +30,7 @@ class WebLoginRequest extends FormRequest
         $accountType = AccountType::tryFrom((string) $this->input('account_type'));
         $identifierRules = $accountType === AccountType::Ubs
             ? ['required', 'string', 'size:7', 'regex:/^[0-9]{7}$/']
-            : ['required', 'email:rfc', 'max:255'];
+            : ['required', 'string', 'max:40', 'regex:/^[A-Za-z0-9_-]+$/'];
 
         return [
             'account_type' => ['required', Rule::enum(AccountType::class)],
