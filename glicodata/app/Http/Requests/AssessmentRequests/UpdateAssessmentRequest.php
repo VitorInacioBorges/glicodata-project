@@ -19,9 +19,9 @@ class UpdateAssessmentRequest extends ApiFormRequest
     {
         return [
             'patient_id' => ['sometimes', 'required', 'uuid', Rule::exists('patients', 'id')],
-            'user_id' => ['sometimes', 'required', 'uuid', Rule::exists('users', 'id')],
-            'symptoms' => ['sometimes', 'required', 'string'],
+            'symptoms' => ['sometimes', 'nullable', 'string', 'max:5000'],
             'answers' => ['sometimes', 'required', 'array'],
+            'answers.*' => ['nullable'],
         ];
     }
 }
