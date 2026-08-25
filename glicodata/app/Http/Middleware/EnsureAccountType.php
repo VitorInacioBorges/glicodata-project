@@ -5,7 +5,6 @@ namespace App\Http\Middleware;
 use App\Enums\AccountType;
 use App\Models\AdministratorModel;
 use App\Models\UbsModel;
-use App\Models\UserModel;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -18,7 +17,6 @@ class EnsureAccountType
         $account = $request->user();
         $accountType = match (true) {
             $account instanceof UbsModel => AccountType::Ubs,
-            $account instanceof UserModel => AccountType::User,
             $account instanceof AdministratorModel => AccountType::Administrator,
             default => null,
         };
@@ -27,20 +25,13 @@ class EnsureAccountType
             abort(Response::HTTP_FORBIDDEN);
         }
 
-        $unitIsActive = ! $account instanceof UserModel || $account->hasActiveAccountContext();
-
-        if (! $account->is_active || ! $unitIsActive) {
+        if (! $account->is_active) {
             if (! $request->expectsJson()) {
                 Auth::guard($accountType->guard())->logout();
                 $request->session()->invalidate();
                 $request->session()->regenerateToken();
 
-                return redirect()
-                    ->route(match ($accountType) {
-                        AccountType::Ubs => 'ubs.login',
-                        AccountType::User => 'user.login',
-                        AccountType::Administrator => 'admin.login',
-                    })
+                return redirect()->route($accountType === AccountType::Ubs ? 'ubs.login' : 'admin.login')
                     ->withErrors(['identifier' => 'Esta conta está inativa.']);
             }
 
