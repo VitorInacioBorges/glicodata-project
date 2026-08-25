@@ -8,7 +8,7 @@ class SecurityHeadersTest extends TestCase
 {
     public function test_html_responses_include_defensive_headers_and_disable_storage(): void
     {
-        $this->get('/login/profissional')
+        $this->get('/login/ubs')
             ->assertOk()
             ->assertHeader('X-Content-Type-Options', 'nosniff')
             ->assertHeader('X-Frame-Options', 'DENY')
