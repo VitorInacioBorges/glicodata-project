@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'Conta individual')
+@section('title', 'Profissional')
 @section('protected-navigation', 'true')
 @section('content')
     <main id="conteudo" class="gd-page">
@@ -8,7 +8,7 @@
             <div class="d-flex gap-2">
                 <a class="btn btn-primary btn-sm" href="{{ route('ubs.professionals.edit', $professional) }}">Editar</a>
                 <form method="POST" action="{{ route('ubs.professionals.destroy', $professional) }}"
-                    data-confirm="Remover esta conta?">
+                    data-confirm="Remover este profissional?">
                     @csrf
                     @method('DELETE')
                     <button class="btn btn-outline-danger btn-sm" type="submit">Remover</button>
@@ -16,17 +16,13 @@
             </div>
         </div>
 
-        <p class="gd-eyebrow">Identidade individual</p>
-        <h1 class="gd-heading">{{ $professional->name }}</h1>
-        <p class="gd-subtitle">{{ $professional->email }}</p>
+        <p class="gd-eyebrow">Referência clínica</p>
+        <h1 class="gd-heading">{{ $professional->first_name }}</h1>
+        <p class="gd-subtitle">{{ $professional->specialty }}</p>
         <div class="gd-detail-grid">
             <section class="gd-panel gd-detail-section">
-                <h2>Conta e vínculo</h2>
+                <h2>Dados profissionais</h2>
                 <dl class="gd-fields">
-                    <div class="gd-field">
-                        <dt>Papel</dt>
-                        <dd>{{ $professional->role->value === 'admin' ? 'Gestor da UBS' : 'Profissional de saúde' }}</dd>
-                    </div>
                     <div class="gd-field">
                         <dt>Status</dt>
                         <dd>
@@ -36,33 +32,8 @@
                         </dd>
                     </div>
                     <div class="gd-field">
-                        <dt>Conselho</dt>
-                        <dd>{{ $professional->council_type?->value ?: 'Não aplicável' }}</dd>
-                    </div>
-                    <div class="gd-field">
-                        <dt>Registro / UF</dt>
-                        <dd>{{ $professional->council_number ? $professional->council_number . '/' . $professional->council_uf : 'Não aplicável' }}
-                        </dd>
-                    </div>
-                    <div class="gd-field">
                         <dt>Especialidade</dt>
-                        <dd>{{ $professional->specialty ?: 'Não aplicável' }}</dd>
-                    </div>
-                    <div class="gd-field">
-                        <dt>CPF</dt>
-                        <dd>{{ $professional->cpf }}</dd>
-                    </div>
-                    <div class="gd-field">
-                        <dt>Nascimento</dt>
-                        <dd>{{ $professional->birth->format('d/m/Y') }}</dd>
-                    </div>
-                    <div class="gd-field">
-                        <dt>Telefone</dt>
-                        <dd>{{ $professional->phone ?: 'Não informado' }}</dd>
-                    </div>
-                    <div class="gd-field">
-                        <dt>Endereço</dt>
-                        <dd>{{ $professional->address ?: 'Não informado' }}</dd>
+                        <dd>{{ $professional->specialty }}</dd>
                     </div>
                     <div class="gd-field">
                         <dt>Identificador</dt>
@@ -75,7 +46,7 @@
                 <ol class="gd-timeline">
                     @forelse ($professional->assessments->sortByDesc('created_at')->take(8) as $assessment)
                         <li>
-                            <strong>{{ $assessment->patient?->name }}</strong>
+                            <strong>{{ $assessment->patient?->first_name }}</strong>
                             <span>
                                 {{ $assessment->created_at->format('d/m/Y H:i') }} ·
                                 {{ $assessment->status->value }}
