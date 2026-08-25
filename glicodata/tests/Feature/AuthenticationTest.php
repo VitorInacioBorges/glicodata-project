@@ -139,7 +139,7 @@ class AuthenticationTest extends TestCase
     {
         UbsModel::factory()->create();
         $administrator = AdministratorModel::factory()->create(['password' => self::PASSWORD]);
-        $token = $this->loginToken('admin', $administrator->email);
+        $token = $this->loginToken('admin', $administrator->admin_code);
 
         $this->withToken($token)->getJson('/api/ubs')->assertOk();
         $this->withToken($token)->getJson('/api/patients')->assertForbidden();
@@ -149,7 +149,7 @@ class AuthenticationTest extends TestCase
     {
         $ubs = UbsModel::factory()->create();
         $administrator = AdministratorModel::factory()->create(['password' => self::PASSWORD]);
-        $token = $this->loginToken('admin', $administrator->email);
+        $token = $this->loginToken('admin', $administrator->admin_code);
 
         $this->withToken($token)->patchJson("/api/ubs/{$ubs->id}", [
             'is_active' => false,
