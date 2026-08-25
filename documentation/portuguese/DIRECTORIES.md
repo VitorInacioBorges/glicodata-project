@@ -7,6 +7,7 @@ ubs-system/
 ├── glicodata/
 │   ├── app/
 │   │   ├── Enums/
+│   │   ├── Console/Commands/
 │   │   ├── Http/
 │   │   │   ├── Controllers/
 │   │   │   └── Requests/
@@ -63,15 +64,17 @@ Controllers HTTP da API. Eles recebem Form Requests tipados, aplicam autorizacao
 | --- | --- |
 | `DistrictControllers/DistrictController.php` | `/api/districts` |
 | `UbsControllers/UbsController.php` | `/api/ubs` |
-| `UbsControllers/UbsAuthController.php` | `/api/auth/ubs/*` |
+| `AuthControllers/ApiAuthController.php` | `/api/auth/*` |
+| `AuthControllers/WebAuthController.php` | `/login`, logouts e troca de senha web |
 | `UserControllers/UserController.php` | `/api/users` |
 | `PatientControllers/PatientController.php` | `/api/patients` |
 | `AssessmentControllers/AssessmentController.php` | `/api/assessments` |
-| `RiskControllers/RiskController.php` | `/api/risks` |
+| `QuestionnaireControllers/QuestionnaireController.php` | `/api/questionnaires/current`, `/api/questionnaire-versions/{id}` |
+| `RiskControllers/RiskController.php` | `/api/risks` (somente leitura) |
 | `ReportControllers/ReportController.php` | `/api/reports` |
 | `AuditEventControllers/AuditEventController.php` | `/api/audit-events` |
 
-`users`, `patients`, `assessments`, `risks` e `reports` expoem CRUD com delete logico. `districts` expõe apenas leitura; `ubs` expõe leitura e update administrativo; auditoria expõe leitura e redacao registrada.
+`users`, `patients`, `assessments` e `reports` expoem CRUD com delete logico. `risks` e questionarios expõem leitura; risco e criado somente pela conclusao no servidor. `districts` expõe leitura; `ubs` expõe leitura e update administrativo; auditoria expõe leitura e redacao registrada.
 
 ### `glicodata/app/Http/Requests/`
 
@@ -85,12 +88,13 @@ Camada de aplicacao. Os services ficam separados por pasta de entidade e concent
 | --- | --- |
 | `DistrictServices/DistrictService.php` | Consultas do catalogo institucional e paginacao limitada. |
 | `UbsServices/UbsService.php` | Consulta e atualizacao auditada de UBS; bloqueia ativacao com dados provisórios. |
-| `UbsServices/KeycloakUbsAuthService.php` | Resolve UBS ativa, vincula `keycloak_id` no primeiro acesso e identifica `audit-admin`. |
+| `AuthServices/AuthenticationService.php` | Valida hashes locais, rehash, emissao/revogacao Sanctum e limite de tokens. |
 | `UserServices/UserService.php` | CRUD com soft delete, email por busca e auditoria transacional. |
 | `PatientServices/PatientService.php` | CRUD com soft delete e auditoria transacional. |
-| `AssessmentServices/AssessmentService.php` | CRUD, consistencia UBS/paciente/usuario e delete logico transacional do risco/relatorio associado. |
-| `RiskServices/RiskService.php` | CRUD com soft delete e auditoria transacional. |
-| `ReportServices/ReportService.php` | CRUD com soft delete e auditoria transacional. |
+| `AssessmentServices/AssessmentService.php` | Rascunho/conclusao imutavel, versao do questionario, consistencia de tenant e auditoria transacional. |
+| `QuestionnaireServices/*` | Versao publicada, validacao dinamica das respostas e schema. |
+| `RiskServices/RiskCalculator.php` | Pontua respostas versionadas e classifica o risco exclusivamente no servidor. |
+| `ReportServices/ReportService.php` | CRUD e exportacao agregada com supressao de grupos menores que cinco. |
 | `AuditEventServices/AuditEventService.php` | Consulta por escopo, registro de snapshots e redacao auditada. |
 
 ### `glicodata/app/Repositories/`
@@ -100,7 +104,7 @@ Camada de acesso a dados. Repositories ficam separados por pasta de entidade, us
 | Caminho | Operacoes definidas |
 | --- | --- |
 | `DistrictRepositories/DistrictRepository.php` | `paginateDistricts`, `findDistrictById` |
-| `UbsRepositories/UbsRepository.php` | `paginateUbs`, `paginateAuthenticatedUbs`, `findUbsById`, `findUbsByEmail`, `findUbsByKeycloakId` |
+| `UbsRepositories/UbsRepository.php` | `paginateUbs`, `paginateAuthenticatedUbs`, `findUbsById`, `findUbsByEmail` |
 | `UserRepositories/UserRepository.php` | `paginateUsers`, `paginateUsersForUbs`, `findUserById`, `findUserByEmail`, `createUser` |
 | `PatientRepositories/PatientRepository.php` | `paginatePatients`, `paginatePatientsForUbs`, `findPatientById`, `createPatient` |
 | `AssessmentRepositories/AssessmentRepository.php` | `paginateAssessments`, `paginateAssessmentsForUbs`, `findAssessmentById`, `createAssessment` |
@@ -110,18 +114,18 @@ Camada de acesso a dados. Repositories ficam separados por pasta de entidade, us
 
 ### `glicodata/app/Policies/`
 
-Policies por entidade registradas em `AppServiceProvider`. Elas autorizam a UBS autenticada pelo guard `keycloak` a acessar apenas dados vinculados a sua propria UBS, exceto distritos, que ficam somente para leitura.
+Policies por entidade registradas em `AppServiceProvider`. Elas autorizam a UBS autenticada a acessar apenas dados vinculados a sua unidade e tratam separadamente o administrador global.
 
 | Caminho | Responsabilidade |
 | --- | --- |
 | `DistrictPolicies/DistrictPolicy.php` | Permite listagem/consulta para UBS ativa e bloqueia escrita. |
-| `UbsPolicies/UbsPolicy.php` | Permite leitura propria; `audit-admin` le/atualiza cadastros; delete e bloqueado. |
+| `UbsPolicies/UbsPolicy.php` | Permite leitura propria; administrador global le/atualiza cadastros; delete e bloqueado. |
 | `UserPolicies/UserPolicy.php` | Restringe usuarios ao mesmo `ubs_id` da UBS autenticada. |
 | `PatientPolicies/PatientPolicy.php` | Restringe pacientes ao mesmo `ubs_id` da UBS autenticada. |
 | `AssessmentPolicies/AssessmentPolicy.php` | Restringe avaliacoes ao mesmo `ubs_id` da UBS autenticada. |
 | `RiskPolicies/RiskPolicy.php` | Restringe riscos pela avaliacao vinculada a UBS autenticada. |
 | `ReportPolicies/ReportPolicy.php` | Restringe relatorios pela avaliacao vinculada a UBS autenticada. |
-| `AuditEventPolicies/AuditEventPolicy.php` | Restringe consulta ao escopo proprio e redacao/consulta global a `audit-admin`. |
+| `AuditEventPolicies/AuditEventPolicy.php` | Restringe consulta ao escopo proprio e redacao/consulta global ao administrador. |
 
 ### `glicodata/app/Models/`
 
@@ -131,12 +135,14 @@ Models Eloquent com `fillable`, casts, tabela explicita e relacionamentos.
 | --- | --- | --- |
 | `DistrictModel.php` | `districts` | `hasMany(UbsModel)` |
 | `UbsModel.php` | `ubs` | `belongsTo(DistrictModel)`, `hasMany(UserModel)`, `hasMany(PatientModel)`, `hasMany(AssessmentModel)`; tambem atua como entidade autenticavel da UBS. |
-| `UserModel.php` | `users` | Perfil profissional (medico/enfermeiro) ou administrador vinculado a UBS; `belongsTo(UbsModel)`, `hasMany(AssessmentModel)` |
+| `AdministratorModel.php` | `administrators` | Identidade administrativa autenticavel e emissora de tokens Sanctum. |
+| `UserModel.php` | `users` | Identidade individual autenticavel, papel, CRM/COREN, UF, especialidade, `belongsTo(UbsModel)` e `hasMany(AssessmentModel)` |
 | `PatientModel.php` | `patients` | Paciente vinculado a UBS; `belongsTo(UbsModel)`, `hasMany(AssessmentModel)` |
-| `AssessmentModel.php` | `assessments` | `belongsTo(PatientModel)`, `belongsTo(UserModel)`, `belongsTo(UbsModel)`, `hasOne(RiskModel)`, `hasOne(ReportModel)` |
+| `QuestionnaireModel.php` / `QuestionnaireVersionModel.php` | `questionnaires`, `questionnaire_versions` | Schema e regras versionados; versao pertence ao questionario. |
+| `AssessmentModel.php` | `assessments` | Paciente, usuario, UBS, versao, status, conclusao, risco e relatorio. |
 | `RiskModel.php` | `risks` | `belongsTo(AssessmentModel)` |
 | `ReportModel.php` | `reports` | `belongsTo(AssessmentModel)` |
-| `AuditEventModel.php` | `audit_events` | `belongsTo(UbsModel)` para ator e UBS proprietaria |
+| `AuditEventModel.php` | `audit_events` | Ator UBS ou administrador e UBS proprietaria. |
 
 `UserModel`, `PatientModel`, `AssessmentModel`, `RiskModel` e `ReportModel` usam `SoftDeletes`. Usuarios e pacientes persistem `birth`, expõem `age` calculada e aceitam endereco/telefone nulos quando a informacao nao estiver disponivel.
 
@@ -147,6 +153,7 @@ Enums nativos do PHP usados como casts nos models.
 | Arquivo | Valores |
 | --- | --- |
 | `UserRole.php` | `admin`, `professional` |
+| `AccountType.php` | `ubs`, `admin` |
 | `RiskClassification.php` | `low`, `moderate`, `high` |
 
 ### `glicodata/app/Utils/`
@@ -165,7 +172,7 @@ Enums nativos do PHP usados como casts nos models.
 
 | Arquivo | Responsabilidade |
 | --- | --- |
-| `AppServiceProvider.php` | Registra Socialite Keycloak, guard `keycloak`, bypass local opcional, policies e carregamento de migrations em subdiretorios. |
+| `AppServiceProvider.php` | Registra policy, regra de senha, rate limiter de login e migrations em subdiretorios. |
 | `RouteServiceProvider.php` | Carrega `routes/web.php` com middleware `web` e `routes/api.php` com middleware `api` e prefixo `/api`. |
 
 ---
@@ -178,30 +185,35 @@ Rotas de interface Blade, sem prefixo `/api`.
 
 | Rota | Tipo | Responsabilidade |
 | --- | --- | --- |
-| `GET /` | Redirect | Redireciona para `/login`. |
-| `GET /login` | Web view | Renderiza o login da UBS ou redireciona para o lobby quando autenticado. |
-| `GET /auth/ubs/redirect` | Web auth | Inicia login institucional via Keycloak. |
-| `GET /auth/ubs/callback` | Web auth | Recebe callback Keycloak, cria sessao `auth:ubs` e redireciona para o lobby. |
+| `GET /` | Redirect | Redireciona para `/login/ubs`. |
+| `GET /login/ubs` | Web view | Renderiza o login da UBS. |
+| `GET /login/admin` | Web view | Renderiza o login administrativo. |
+| `POST /login` | Web auth | Valida credenciais e cria sessao no guard UBS/admin. |
+| `GET/POST /cadastro/ubs` | Cadastro publico | Cria UBS pendente com CNES e senha confirmada. |
 | `GET /ubs/lobby` | Web view | Renderiza o lobby operacional do GlicoData. |
-| `GET /ubs/pacientes*` | Web view | Renderiza listagem e detalhe demonstrativo de pacientes. |
-| `GET /ubs/profissionais*` | Web view | Renderiza listagem e detalhe demonstrativo de profissionais. |
-| `GET /ubs/avaliacoes*` | Web view | Renderiza listagem e detalhe demonstrativo de avaliacoes. |
-| `POST /ubs/logout` | Web auth | Encerra a sessao local e redireciona para logout Keycloak quando configurado. |
+| `GET/PUT /ubs/conta/perfil` | Perfil UBS | Atualiza somente os dados da UBS autenticada. |
+| `/ubs/pacientes*` | Web CRUD | CRUD real de pacientes escopado ao usuario/UBS. |
+| `/ubs/profissionais*` | Web CRUD | CRUD real de identidades e papeis da equipe. |
+| `/ubs/avaliacoes*` | Web CRUD | Rascunho, preenchimento e conclusao da anamnese versionada. |
+| `/ubs/relatorios*` | Web CRUD/export | Relatorios reais e CSV agregado anonimizado. |
+| `POST /ubs/logout` | Web auth | Encerra a sessao local da UBS. |
+| `GET /admin` | Web view | Painel administrativo global. |
+| `GET/PUT /admin/ubs*` | Gestao UBS | Revisa, edita, ativa e desativa UBS. |
 
 ### `glicodata/routes/api.php`
 
-Rotas JSON carregadas com prefixo `/api`. Apenas `GET /api/auth/ubs/login` e `GET /api/auth/ubs/callback` ficam abertas; as demais rotas usam middleware `auth:keycloak`. Em desenvolvimento local, `GLICODATA_AUTH_DISABLED=true` faz esse guard resolver uma UBS local sem token.
+Rotas JSON carregadas com prefixo `/api`. Apenas `POST /api/auth/login` fica aberta; as demais rotas usam `auth:sanctum` e controle de tipo de conta.
 
 | Rota | Tipo | Responsabilidade |
 | --- | --- | --- |
-| `GET /api/auth/ubs/login` | Auth | Redireciona para o login Keycloak. |
-| `GET /api/auth/ubs/callback` | Auth | Recebe retorno do Keycloak e retorna token/dados da UBS ativa. |
-| `GET /api/auth/ubs/me` | Auth | Retorna a UBS autenticada pelo Bearer token. |
-| `GET /api/auth/ubs/logout` | Auth | Retorna URL de logout do Keycloak. |
+| `POST /api/auth/login` | Auth | Valida UBS/admin e retorna token Sanctum de 24 horas. |
+| `GET /api/auth/me` | Auth | Retorna a identidade autenticada pelo Bearer token. |
+| `POST /api/auth/logout` | Auth | Revoga o token atual. |
+| `PUT /api/auth/password` | Auth | Troca senha e revoga todos os tokens da conta. |
 | `GET /api/districts*` | REST JSON | Consulta ao catalogo institucional de distritos. |
-| `GET/PUT/PATCH /api/ubs*` | REST JSON | Consulta de UBS e manutencao por `audit-admin`. |
+| `POST/GET/PUT/PATCH /api/ubs*` | REST JSON | Criacao pendente por admin, consulta e manutencao global/propria. |
 | `apiResource` | REST JSON | CRUD com delete logico para `users`, `patients`, `assessments`, `risks`, `reports`. |
-| `GET /api/audit-events*` | Auditoria | Consulta propria, ou global para `audit-admin`. |
+| `GET /api/audit-events*` | Auditoria | Consulta propria, ou global para administrador. |
 | `POST /api/audit-events/{id}/redact` | Auditoria | Redacao de snapshots sensiveis com novo evento permanente. |
 
 ---
@@ -214,7 +226,7 @@ Rotas JSON carregadas com prefixo `/api`. Apenas `GET /api/auth/ubs/login` e `GE
 | --- | --- |
 | `district-migrations/2026_01_23_143000_create_districts_table.php` | `districts` |
 | `ubs-migrations/2026_01_23_143100_create_ubs_table.php` | `ubs` |
-| `ubs-migrations/2026_01_23_143150_seed_ponta_grossa_catalog.php` | Carga inicial de 5 distritos e 42 UBS de Ponta Grossa. |
+| `ubs-migrations/2026_01_23_143150_seed_ponta_grossa_catalog.php` | Carga institucional somente dos 5 distritos de Ponta Grossa. |
 | `user-migrations/2026_01_23_143151_create_users_table.php` | `users`, com role `professional`/`admin` e contato opcional |
 | `patient-migrations/2026_01_23_143200_create_patients_table.php` | `patients`, com endereco e telefone opcionais |
 | `assessment-migrations/2026_01_23_143300_create_assessments_table.php` | `assessments` |
@@ -225,14 +237,16 @@ Rotas JSON carregadas com prefixo `/api`. Apenas `GET /api/auth/ubs/login` e `GE
 | `2026_01_23_150800_create_jobs_tables.php` | `jobs`, `job_batches`, `failed_jobs` |
 | `2026_04_27_135537_create_sessions_table.php` | `sessions` |
 | `2026_04_27_145038_create_cache_table.php` | `cache`, `cache_locks` |
+| `2026_08_18_181400_add_cnes_and_optional_profile_to_ubs.php` | Adiciona CNES e torna o perfil inicial opcional. |
+| `2026_08_18_181500_remove_automatically_seeded_ubs.php` | Remove irreversivelmente as 42 UBS automáticas e seus vínculos. |
 
-As migrations foram consolidadas para instalacao limpa: usam UUID, timestamps com timezone, constraints PostgreSQL, soft delete operacional e auditoria. Em `users`, `professional` representa medicos e enfermeiros; `admin` tambem pode ser referenciado como executor de avaliacao. Em `users` e `patients`, endereco e telefone podem ser `NULL`. UBS com email `@seed.local` ou contato/endereco pendente sao inseridas inativas.
+As migrations usam UUID interno, CNES unico de sete digitos, timestamps com timezone, constraints PostgreSQL, soft delete operacional e auditoria. O perfil da UBS e opcional no cadastro inicial; toda conta nasce inativa ate aprovacao administrativa. A limpeza incremental exclui as UBS deterministicas do catalogo antigo e seus vinculos.
 
 ### `glicodata/database/seeders/`
 
 | Arquivo | Responsabilidade |
 | --- | --- |
-| `DatabaseSeeder.php` | Cria distrito, UBS com `keycloak_id` e um perfil `professional` operacional de teste. |
+| `DatabaseSeeder.php` | Nao cria dados automaticamente; testes usam factories isoladas. |
 
 ### `glicodata/database/factories/`
 
@@ -248,8 +262,11 @@ As migrations foram consolidadas para instalacao limpa: usam UUID, timestamps co
 
 | Arquivo | Responsabilidade |
 | --- | --- |
-| `layouts/app.blade.php` | Layout base com Vite, navegacao protegida da UBS e aviso visual quando o bypass local esta ativo. |
-| `ubs/auth/login.blade.php` | Tela publica de acesso institucional da UBS. |
+| `layouts/app.blade.php` | Layout base com Vite e navegacao protegida da UBS. |
+| `ubs/auth/login.blade.php` | Tela publica de acesso institucional por CNES. |
+| `ubs/auth/register.blade.php` | Cadastro publico CNES/senha com aprovacao posterior. |
+| `ubs/profile/edit.blade.php` | Autoedicao do perfil da UBS autenticada. |
+| `admin/ubs/*.blade.php` | Listagem, revisao e ativacao administrativa de UBS. |
 | `ubs/lobby.blade.php` | Lobby do GlicoData com atalhos para pacientes, profissionais e avaliacoes. |
 | `ubs/patients/*.blade.php` | Listagem e detalhe visual de pacientes. |
 | `ubs/professionals/*.blade.php` | Listagem e detalhe visual de profissionais. |
@@ -275,6 +292,8 @@ Arquivos de entrada do Vite configurados em `vite.config.js`: `resources/css/app
 | Caminho | Responsabilidade |
 | --- | --- |
 | `tests/Feature/ExampleTest.php` | Testa se `GET /` retorna status 200. |
-| `tests/Feature/ApiValidationTest.php` | Testes existentes de API; precisam ser atualizados posteriormente para Form Requests, `birth`, delete logico, auditoria e Keycloak. |
+| `tests/Feature/ApiValidationTest.php` | Fronteira de autenticacao e validacoes da API. |
+| `tests/Feature/AuthenticationTest.php` | Sanctum, expiracao, limites, permissoes e isolamento por UBS. |
+| `tests/Feature/WebAuthenticationTest.php` | Sessoes UBS/admin e troca de senha. |
 | `tests/Unit/ExampleTest.php` | Teste unitario basico `assertTrue(true)`. |
 | `phpunit.xml` | Configura suite Unit e Feature com SQLite em memoria no ambiente de teste. |
