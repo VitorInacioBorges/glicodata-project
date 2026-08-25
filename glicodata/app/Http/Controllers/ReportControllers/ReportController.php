@@ -7,6 +7,7 @@ use App\Http\Requests\CommonRequests\PaginationRequest;
 use App\Http\Requests\ReportRequests\ExportReportsRequest;
 use App\Http\Requests\ReportRequests\StoreReportRequest;
 use App\Http\Requests\ReportRequests\UpdateReportRequest;
+use App\Http\Resources\ReportResource;
 use App\Models\ReportModel;
 use App\Services\ReportServices\ReportService;
 use App\Support\TenantContext;
@@ -16,26 +17,23 @@ use Illuminate\Support\Facades\Gate;
 
 class ReportController extends Controller
 {
-    public function __construct(
-        protected ReportService $service,
-        protected TenantContext $tenant,
-    ) {}
+    public function __construct(protected ReportService $service, protected TenantContext $tenant) {}
 
     public function index(PaginationRequest $request): JsonResponse
     {
         Gate::authorize('viewAny', ReportModel::class);
-
-        return response()->json($this->service->getReportsForUbs(
+        $collection = ReportResource::collection($this->service->getReportsForUbs(
             $request->perPage(),
             $this->tenant->ubsId($request->user()),
         ));
+
+        return response()->json($collection->response()->getData(true));
     }
 
     public function export(ExportReportsRequest $request): JsonResponse|Response
     {
-        Gate::authorize('export', ReportModel::class);
+        Gate::authorize('viewAny', ReportModel::class);
         $summary = $this->service->getAnonymizedSummaryForUbs($this->tenant->ubsId($request->user()));
-
         if ($request->validated('format', 'csv') === 'json') {
             return response()->json(['data' => $summary]);
         }
@@ -52,7 +50,7 @@ class ReportController extends Controller
         $report = $this->service->getReportById($id);
         Gate::authorize('view', $report);
 
-        return response()->json($report);
+        return response()->json(ReportResource::make($report));
     }
 
     public function store(StoreReportRequest $request): JsonResponse
@@ -60,14 +58,14 @@ class ReportController extends Controller
         $data = $request->validated();
         Gate::authorize('create', [ReportModel::class, $data['assessment_id']]);
 
-        return response()->json($this->service->createReport($data), 201);
+        return response()->json(ReportResource::make($this->service->createReport($data)), 201);
     }
 
     public function update(UpdateReportRequest $request, string $id): JsonResponse
     {
         Gate::authorize('update', $this->service->getReportById($id));
 
-        return response()->json($this->service->updateReport($id, $request->validated()));
+        return response()->json(ReportResource::make($this->service->updateReport($id, $request->validated())));
     }
 
     public function destroy(string $id): JsonResponse
