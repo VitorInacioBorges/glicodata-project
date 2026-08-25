@@ -2,24 +2,25 @@
 
 namespace App\Policies\AuditEventPolicies;
 
+use App\Models\AdministratorModel;
 use App\Models\AuditEventModel;
 use App\Models\UbsModel;
 
 class AuditEventPolicy
 {
-    public function viewAny(UbsModel $ubs): bool
+    public function viewAny(UbsModel|AdministratorModel $account): bool
     {
-        return (bool) $ubs->is_active;
+        return (bool) $account->is_active;
     }
 
-    public function view(UbsModel $ubs, AuditEventModel $event): bool
+    public function view(UbsModel|AdministratorModel $account, AuditEventModel $event): bool
     {
-        return (bool) $ubs->is_active
-            && ($ubs->isAuditAdmin() || hash_equals((string) $ubs->id, (string) $event->owner_ubs_id));
+        return (bool) $account->is_active
+            && ($account instanceof AdministratorModel || hash_equals((string) $account->id, (string) $event->owner_ubs_id));
     }
 
-    public function redact(UbsModel $ubs, AuditEventModel $event): bool
+    public function redact(UbsModel|AdministratorModel $account, AuditEventModel $event): bool
     {
-        return (bool) $ubs->is_active && $ubs->isAuditAdmin();
+        return (bool) $account->is_active && $account instanceof AdministratorModel;
     }
 }
