@@ -5,20 +5,23 @@
 
 namespace App\Models;
 
+use Database\Factories\UbsFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
+use Laravel\Sanctum\HasApiTokens;
 
 class UbsModel extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UbsFactory> */
-    use HasFactory, HasUuids;
+    use HasApiTokens, HasFactory, HasUuids;
 
     protected $table = 'ubs';
 
     protected $fillable = [
+        'cnes',
         'district_id',
         'name',
         'bairro_ref',
@@ -26,7 +29,6 @@ class UbsModel extends Authenticatable
         'phone',
         'email',
         'password',
-        'keycloak_id',
         'is_active',
     ];
 
@@ -35,7 +37,6 @@ class UbsModel extends Authenticatable
      */
     protected $hidden = [
         'password',
-        'audit_admin',
     ];
 
     /**
@@ -89,15 +90,8 @@ class UbsModel extends Authenticatable
         return $this->hasMany(AuditEventModel::class, 'actor_ubs_id');
     }
 
-    public function setAuditAdmin(bool $isAuditAdmin): self
+    protected static function newFactory(): UbsFactory
     {
-        $this->setAttribute('audit_admin', $isAuditAdmin);
-
-        return $this;
-    }
-
-    public function isAuditAdmin(): bool
-    {
-        return (bool) $this->getAttribute('audit_admin');
+        return UbsFactory::new();
     }
 }
