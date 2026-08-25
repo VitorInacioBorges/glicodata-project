@@ -29,14 +29,6 @@ class QuestionnaireAnswerValidator
         }
 
         foreach ($questions as $code => $question) {
-            if (($question['type'] ?? null) === 'computed_age') {
-                if ($patient->age === null) {
-                    $errors["answers.{$code}"][] = 'Não foi possível calcular a idade do paciente.';
-                }
-
-                continue;
-            }
-
             $hasAnswer = array_key_exists($code, $answers)
                 && $answers[$code] !== null
                 && $answers[$code] !== '';
