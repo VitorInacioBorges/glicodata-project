@@ -78,6 +78,9 @@ Route::middleware(['auth:ubs', 'auth.session', 'account:ubs'])
 
         Route::get('/relatorios/exportar', [ReportWebController::class, 'export'])
             ->name('reports.export');
+        Route::get('/relatorios/{id}/pdf', [ReportWebController::class, 'pdf'])
+            ->whereUuid('id')
+            ->name('reports.pdf');
         Route::resource('relatorios', ReportWebController::class)
             ->parameters(['relatorios' => 'id'])
             ->names('reports')
