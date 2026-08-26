@@ -9,7 +9,6 @@
             <div>
                 <p class="gd-eyebrow">Cadastro assistencial</p>
                 <h1 class="gd-heading">Pacientes</h1>
-                <p class="gd-subtitle">Registros reais da UBS autenticada, isolados por unidade.</p>
             </div>
             <a class="btn btn-primary" href="{{ route('ubs.patients.create') }}">Novo paciente</a>
         </div>
@@ -17,7 +16,6 @@
         <section class="gd-panel" aria-label="Listagem de pacientes">
             <div class="gd-toolbar">
                 <strong>{{ $patients->total() }} {{ $patients->total() === 1 ? 'paciente' : 'pacientes' }}</strong>
-                <span class="text-secondary small">Dados atualizados do banco</span>
             </div>
             <div class="table-responsive">
                 <table class="table gd-table gd-responsive-table align-middle">

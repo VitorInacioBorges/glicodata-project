@@ -3,8 +3,7 @@
 @section('protected-navigation', 'true')
 @section('content')
     <main id="conteudo" class="gd-page">
-        <p class="gd-eyebrow">Pacientes</p>
-        <h1 class="gd-heading">Novo paciente</h1>
+        <h1 class="gd-heading">Informações:</h1>
 
         <section class="gd-panel gd-form-panel mt-4">
             <form method="POST" action="{{ route('ubs.patients.store') }}">

@@ -18,9 +18,7 @@
             </div>
         </div>
 
-        <p class="gd-eyebrow">Paciente</p>
         <h1 class="gd-heading">{{ $patient->first_name }}</h1>
-        <p class="gd-subtitle">Registro assistencial da unidade autenticada.</p>
 
         <div class="gd-detail-grid">
             <section class="gd-panel gd-detail-section" aria-labelledby="patient-data-title">
