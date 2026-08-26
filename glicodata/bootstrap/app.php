@@ -21,7 +21,7 @@ return Application::configure(basePath: dirname(__DIR__))
             str_starts_with($request->path(), 'admin') => route('admin.login'),
             str_starts_with($request->path(), 'ubs/pacientes'),
             str_starts_with($request->path(), 'ubs/avaliacoes'),
-            str_starts_with($request->path(), 'ubs/relatorios') => route('user.login'),
+            str_starts_with($request->path(), 'ubs/relatorios') => route('ubs.login'),
             default => route('ubs.login'),
         });
     })
