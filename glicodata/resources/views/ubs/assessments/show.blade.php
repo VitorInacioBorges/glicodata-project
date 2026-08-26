@@ -35,7 +35,7 @@
             {{ $assessment->started_at?->format('d/m/Y H:i') ?? $assessment->created_at->format('d/m/Y H:i') }}</p>
         <div class="gd-detail-grid">
             <section class="gd-panel gd-detail-section">
-                <h2>Resultado e contexto</h2>
+                <h2>Resultado</h2>
                 <dl class="gd-fields">
                     <div class="gd-field">
                         <dt>Status</dt>
@@ -70,7 +70,6 @@
             <section class="gd-panel gd-detail-section">
                 <h2>Relatório</h2>
                 @if ($assessment->report)
-                    <p class="fw-semibold">Relatório da anamnese</p>
                     <a class="btn btn-outline-primary btn-sm"
                         href="{{ route('ubs.reports.show', $assessment->report) }}">Abrir relatório</a>
                 @elseif ($assessment->status->value === 'completed')
@@ -84,7 +83,7 @@
         </div>
         @if ($assessment->questionnaireVersion)
             <section class="gd-panel gd-detail-section mt-3">
-                <h2>Respostas registradas</h2>
+                <h2>Respostas</h2>
                 <dl class="gd-fields">
                     @foreach ($assessment->questionnaireVersion->schema as $question)
                         @php

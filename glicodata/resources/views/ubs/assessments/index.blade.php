@@ -7,7 +7,6 @@
             <div>
                 <p class="gd-eyebrow">Avaliação clínica</p>
                 <h1 class="gd-heading">Anamneses</h1>
-                <p class="gd-subtitle">Preenchimentos versionados com risco calculado exclusivamente no servidor.</p>
             </div>
             <a class="btn btn-primary" href="{{ route('ubs.assessments.create') }}">Nova anamnese</a>
         </div>

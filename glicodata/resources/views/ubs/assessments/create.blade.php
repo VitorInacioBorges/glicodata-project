@@ -5,11 +5,7 @@
 
 @section('content')
     <main id="conteudo" class="gd-page">
-        <p class="gd-eyebrow">Anamnese</p>
-        <h1 class="gd-heading">Iniciar preenchimento</h1>
-        <p class="gd-subtitle">
-            {{ $questionnaireVersion->questionnaire->title }} · versão {{ $questionnaireVersion->version }}
-        </p>
+        <h1 class="gd-heading">Informações da Avaliação:</h1>
 
         <section class="gd-panel gd-form-panel mt-4">
             @if ($errors->any())
@@ -31,7 +27,7 @@
                     <input type="hidden" name="questionnaire_version_id" value="{{ $questionnaireVersion->id }}">
 
                     <div class="mb-3">
-                        <label class="form-label" for="patient_id">Paciente</label>
+                        <label class="form-label" for="patient_id">Paciente avaliado</label>
                         <select class="form-select" id="patient_id" name="patient_id" required>
                             <option value="">Selecione</option>
                             @foreach ($patients as $patient)
@@ -56,7 +52,6 @@
                             placeholder="Pesquise pelo primeiro nome ou especialidade"
                             autocomplete="off" aria-autocomplete="list" aria-controls="professional_results"
                             data-professional-input required>
-                        <div class="form-text">O registro guarda somente o profissional selecionado, sem dados pessoais.</div>
                         <div id="professional_results" class="gd-search-results" role="listbox"
                             data-professional-results hidden>
                             @foreach ($professionals as $professional)
