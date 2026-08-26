@@ -16,9 +16,7 @@
             </div>
         </div>
 
-        <p class="gd-eyebrow">Referência clínica</p>
         <h1 class="gd-heading">{{ $professional->first_name }}</h1>
-        <p class="gd-subtitle">{{ $professional->specialty }}</p>
         <div class="gd-detail-grid">
             <section class="gd-panel gd-detail-section">
                 <h2>Dados profissionais</h2>

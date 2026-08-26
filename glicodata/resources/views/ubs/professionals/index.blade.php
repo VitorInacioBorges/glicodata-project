@@ -9,7 +9,6 @@
             <div>
                 <p class="gd-eyebrow">Equipe da unidade</p>
                 <h1 class="gd-heading">Profissionais</h1>
-                <p class="gd-subtitle">Referências clínicas sem credencial de acesso ou dados pessoais.</p>
             </div>
             <a class="btn btn-primary" href="{{ route('ubs.professionals.create') }}">Novo profissional</a>
         </div>
