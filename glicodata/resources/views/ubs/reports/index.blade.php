@@ -7,18 +7,13 @@
             <div>
                 <p class="gd-eyebrow">Documentação clínica</p>
                 <h1 class="gd-heading">Relatórios</h1>
-                <p class="gd-subtitle">CRUD assistencial e exportação estatística sem identificadores ou texto livre.</p>
             </div>
             <div class="d-flex gap-2">
                 <a class="btn btn-outline-primary" href="{{ route('ubs.reports.export') }}">
-                    Exportar CSV anonimizado
+                    Exportar CSV
                 </a>
                 <a class="btn btn-primary" href="{{ route('ubs.reports.create') }}">Novo relatório</a>
             </div>
-        </div>
-
-        <div class="alert alert-info">
-            A exportação contém somente contagens agregadas. Grupos com menos de cinco registros têm o total suprimido.
         </div>
 
         <section class="gd-panel">

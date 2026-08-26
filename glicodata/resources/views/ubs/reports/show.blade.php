@@ -6,6 +6,9 @@
         <div class="d-flex justify-content-between gap-3 mb-4">
             <a class="btn btn-outline-primary btn-sm" href="{{ route('ubs.reports.index') }}">Voltar</a>
             <div class="d-flex gap-2">
+                <a class="btn btn-outline-primary btn-sm" href="{{ route('ubs.reports.pdf', $report) }}">
+                    Exportar PDF
+                </a>
                 <a class="btn btn-primary btn-sm" href="{{ route('ubs.reports.edit', $report) }}">Editar</a>
                 <form method="POST" action="{{ route('ubs.reports.destroy', $report) }}"
                     data-confirm="Remover este relatório?">
@@ -16,8 +19,7 @@
             </div>
         </div>
 
-        <p class="gd-eyebrow">Relatório clínico</p>
-        <h1 class="gd-heading">Relatório da anamnese</h1>
+        <h1 class="gd-heading">Relatório da Anamnese</h1>
         <p class="gd-subtitle">
             Paciente:
             <a href="{{ route('ubs.patients.show', $report->assessment->patient) }}">
@@ -33,7 +35,7 @@
                 <div class="gd-preserve-lines">{{ $report->description }}</div>
             </section>
             <section class="gd-panel gd-detail-section">
-                <h2>Contexto</h2>
+                <h2>Informações</h2>
                 <dl class="gd-fields">
                     <div class="gd-field">
                         <dt>Profissional</dt>
