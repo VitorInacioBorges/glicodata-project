@@ -141,6 +141,83 @@ class ClinicalWorkflowTest extends TestCase
         $this->assertSoftDeleted(ReportModel::class, ['id' => $reportId]);
     }
 
+    public function test_report_pdf_download_is_tenant_scoped_and_contains_clinical_context(): void
+    {
+        $assessment = $this->completedAssessment();
+        $this->travelTo(now()->setDate(2026, 8, 26)->setTime(13, 45));
+
+        $reportId = $this->postJson('/api/reports', [
+            'assessment_id' => $assessment->id,
+            'description' => "Descrição clínica restrita.\nSegunda linha <script>alert('x')</script>",
+        ])->assertCreated()->json('id');
+
+        $this->travelBack();
+        $report = ReportModel::query()
+            ->with(['assessment.patient', 'assessment.professional', 'assessment.risk'])
+            ->findOrFail($reportId);
+        $pdfRoute = route('ubs.reports.pdf', $report);
+
+        $this->actingAs($this->ubs, 'ubs');
+        $this->get(route('ubs.reports.show', $report))
+            ->assertOk()
+            ->assertSee($pdfRoute, false)
+            ->assertSee('Exportar PDF');
+
+        $response = $this->get($pdfRoute)
+            ->assertOk()
+            ->assertHeader('Content-Type', 'application/pdf')
+            ->assertHeader('Content-Disposition', "attachment; filename=glicodata-relatorio-{$report->id}.pdf");
+
+        $this->assertStringStartsWith('%PDF-', $response->getContent());
+
+        $html = view('ubs.reports.pdf', compact('report'))->render();
+        foreach ([
+            '26/08/2026 13:45',
+            'Iara',
+            'Ana',
+            'Endocrinologia',
+            'Alto',
+            '26 pontos',
+            '50%',
+            'Descrição clínica restrita.',
+            'Segunda linha',
+        ] as $expected) {
+            $this->assertStringContainsString($expected, $html);
+        }
+        $this->assertStringNotContainsString('<script>', $html);
+    }
+
+    public function test_report_pdf_requires_a_session_from_the_owner_ubs(): void
+    {
+        $report = ReportModel::query()->create([
+            'assessment_id' => $this->completedAssessment()->id,
+            'description' => 'Descrição clínica restrita.',
+        ]);
+        $pdfRoute = route('ubs.reports.pdf', $report);
+
+        $this->get($pdfRoute)->assertRedirect(route('ubs.login'));
+
+        $otherUbs = UbsModel::factory()->create();
+        $this->actingAs($otherUbs, 'ubs');
+        $this->get($pdfRoute)->assertForbidden();
+    }
+
+    public function test_inactive_ubs_cannot_download_report_pdf(): void
+    {
+        $inactiveUbs = UbsModel::factory()->create(['is_active' => false]);
+        $this->actingAs($inactiveUbs, 'ubs');
+
+        $this->get(route('ubs.reports.pdf', '00000000-0000-4000-8000-000000000000'))
+            ->assertRedirect(route('ubs.login'));
+    }
+
+    public function test_missing_report_pdf_returns_not_found(): void
+    {
+        $this->actingAs($this->ubs, 'ubs');
+
+        $this->get(route('ubs.reports.pdf', '00000000-0000-4000-8000-000000000000'))->assertNotFound();
+    }
+
     public function test_blade_uses_ubs_session_and_exposes_dynamic_professional_search(): void
     {
         $this->actingAs($this->ubs, 'ubs');
