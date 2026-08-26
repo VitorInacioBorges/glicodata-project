@@ -7,44 +7,37 @@
     <main id="conteudo" class="gd-page">
         <section class="gd-hero" aria-labelledby="lobby-title">
             <div>
-                <p class="gd-eyebrow text-white-50">Unidade Básica de Saúde</p>
-                <h1 id="lobby-title">Atendimento da unidade</h1>
-                <p>Gerencie a equipe e os registros clínicos pela sessão institucional da unidade.</p>
-            </div>
-            <div class="gd-hero-unit">
-                <small>Sessão ativa</small>
-                <strong>{{ auth('ubs')->user()?->name ?? 'Unidade autenticada' }}</strong>
-                <div class="small text-white-50 mt-1">Autenticação local segura</div>
+                <h1 id="lobby-title">Sistema GlicoData</h1>
+                <p>Gerencie pacientes e profissionais para anamneses de Diabetes Mellitus Tipo II</p>
             </div>
         </section>
 
         <div class="d-flex flex-wrap align-items-end justify-content-between gap-3 mb-4">
             <div>
-                <p class="gd-eyebrow">Módulos</p>
-                <h2 class="gd-heading mb-0">Visão da unidade</h2>
+                <p class="gd-eyebrow">Seções</p>
+                <h2 class="gd-heading mb-0">{{ auth('ubs')->user()?->name ?? 'Unidade autenticada' }}</h2>
             </div>
-            <span class="gd-demo-note">Dados persistidos no PostgreSQL</span>
         </div>
 
         <section class="gd-module-grid" aria-label="Módulos do GlicoData">
             <a class="gd-module" href="{{ route('ubs.patients.index') }}">
                 <img src="{{ asset('images/module-patients.svg') }}" alt="">
                 <h2>Pacientes</h2>
-                <p>Cadastros vinculados à UBS e acompanhamento dos dados disponíveis.</p>
+                <p>Pacientes cadastrados e vinculados à UBS. Acompanhe seus dados registrados.</p>
                 <span class="gd-module-action">Abrir listagem</span>
             </a>
 
             <a class="gd-module" href="{{ route('ubs.professionals.index') }}">
                 <img src="{{ asset('images/module-professionals.svg') }}" alt="">
                 <h2>Profissionais</h2>
-                <p>Referências assistenciais com somente primeiro nome e especialidade.</p>
+                <p>Identidades assistenciais responsáveis pelas anamneses e relatórios.</p>
                 <span class="gd-module-action">Abrir listagem</span>
             </a>
 
             <a class="gd-module" href="{{ route('ubs.assessments.index') }}">
                 <img src="{{ asset('images/module-assessments.svg') }}" alt="">
-                <h2>Avaliações recentes</h2>
-                <p>Registros clínicos vinculados ao paciente e ao profissional executor.</p>
+                <h2>Avaliações</h2>
+                <p>Registros clínicos vinculados ao paciente e a um profissional.</p>
                 <span class="gd-module-action">Abrir listagem</span>
             </a>
         </section>
