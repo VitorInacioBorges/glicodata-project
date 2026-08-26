@@ -11,6 +11,7 @@ use App\Models\AssessmentModel;
 use App\Models\ReportModel;
 use App\Services\ReportServices\ReportService;
 use App\Support\TenantContext;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -63,6 +64,16 @@ class ReportWebController extends Controller
         Gate::authorize('view', $report);
 
         return view('ubs.reports.show', compact('report'));
+    }
+
+    public function pdf(string $id): Response
+    {
+        $report = $this->service->getReportById($id);
+        Gate::authorize('view', $report);
+
+        return Pdf::loadView('ubs.reports.pdf', compact('report'))
+            ->setPaper('a4')
+            ->download("glicodata-relatorio-{$report->id}.pdf");
     }
 
     public function edit(string $id): View
