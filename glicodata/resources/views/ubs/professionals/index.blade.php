@@ -16,7 +16,6 @@
         <section class="gd-panel" aria-label="Listagem de profissionais">
             <div class="gd-toolbar">
                 <strong>{{ $professionals->total() }} profissionais</strong>
-                <span class="text-secondary small">Escopo da UBS autenticada</span>
             </div>
             <div class="table-responsive">
                 <table class="table gd-table gd-responsive-table align-middle">

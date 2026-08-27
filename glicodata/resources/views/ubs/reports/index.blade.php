@@ -19,7 +19,6 @@
         <section class="gd-panel">
             <div class="gd-toolbar">
                 <strong>{{ $reports->total() }} relatórios</strong>
-                <span class="text-secondary small">Dados reais da unidade</span>
             </div>
             <div class="table-responsive">
                 <table class="table gd-table gd-responsive-table align-middle">
