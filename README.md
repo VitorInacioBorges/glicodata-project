@@ -84,3 +84,6 @@ Laravel application for UBS institutional management and type 2 diabetes risk as
 - PostgreSQL uses `glicodata_db`; SQLite in memory is reserved for automated tests.
 
 See the [English execution guide](./documentation/english/EXECUTION.md).
+
+codex resume 01a03f50-b51b-7bf3-9631-69eb4a0225c3
+codex resume 01a03f50-b51b-7bf3-9631-69eb4a0225c3
