@@ -11,7 +11,7 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        // $middleware->trustProxies(at '*'); // laravel confia nos cabeçalhos de proxy 
+        $middleware->trustProxies(at '*'); // laravel confia nos cabeçalhos de proxy 
 
         $middleware->append(App\Http\Middleware\SecurityHeaders::class);
 
