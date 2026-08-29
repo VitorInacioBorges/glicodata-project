@@ -27,6 +27,37 @@ class CredentialCommandsTest extends TestCase
         $this->assertTrue(Hash::check('StrongPassword!123', $administrator->password));
     }
 
+    public function test_administrator_is_bootstrapped_from_environment_only_once(): void
+    {
+        putenv('GLICODATA_BOOTSTRAP_ADMIN_CODE=admin_prod');
+        putenv('GLICODATA_BOOTSTRAP_ADMIN_PASSWORD=BootstrapPassword!123');
+
+        try {
+            $this->artisan('glicodata:admin-create', ['--from-env' => true])
+                ->assertSuccessful();
+
+            $administrator = AdministratorModel::query()->sole();
+
+            $this->assertSame('ADMIN_PROD', $administrator->admin_code);
+            $this->assertTrue(Hash::check('BootstrapPassword!123', $administrator->password));
+
+            putenv('GLICODATA_BOOTSTRAP_ADMIN_PASSWORD=DifferentPassword!456');
+
+            $this->artisan('glicodata:admin-create', ['--from-env' => true])
+                ->expectsOutput('Administrador de bootstrap já existe. Nenhuma credencial foi alterada.')
+                ->assertSuccessful();
+
+            $administrator->refresh();
+
+            $this->assertSame(1, AdministratorModel::query()->count());
+            $this->assertTrue(Hash::check('BootstrapPassword!123', $administrator->password));
+            $this->assertFalse(Hash::check('DifferentPassword!456', $administrator->password));
+        } finally {
+            putenv('GLICODATA_BOOTSTRAP_ADMIN_CODE');
+            putenv('GLICODATA_BOOTSTRAP_ADMIN_PASSWORD');
+        }
+    }
+
     public function test_ubs_password_command_revokes_existing_tokens(): void
     {
         $ubs = UbsModel::factory()->create();

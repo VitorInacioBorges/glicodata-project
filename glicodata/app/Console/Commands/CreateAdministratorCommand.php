@@ -10,22 +10,37 @@ use Illuminate\Validation\Rules\Password;
 
 class CreateAdministratorCommand extends Command
 {
-    protected $signature = 'glicodata:admin-create {admin_code?}';
+    protected $signature = 'glicodata:admin-create
+                            {admin_code?}
+                            {--from-env : Lê as credenciais das variáveis de bootstrap}';
 
     protected $description = 'Cria uma conta administrativa global por código e senha';
 
     public function handle(): int
     {
-        $adminCode = Str::upper(trim((string) ($this->argument('admin_code') ?: $this->ask('Código do administrador'))));
-        $password = (string) $this->secret('Senha');
-        $confirmation = (string) $this->secret('Confirme a senha');
+        $fromEnvironment = (bool) $this->option('from-env');
+        $adminCode = $fromEnvironment
+            ? Str::upper(trim((string) getenv('GLICODATA_BOOTSTRAP_ADMIN_CODE')))
+            : Str::upper(trim((string) ($this->argument('admin_code') ?: $this->ask('Código do administrador'))));
+        $password = $fromEnvironment
+            ? (string) getenv('GLICODATA_BOOTSTRAP_ADMIN_PASSWORD')
+            : (string) $this->secret('Senha');
+        $confirmation = $fromEnvironment
+            ? $password
+            : (string) $this->secret('Confirme a senha');
+
+        $adminCodeRules = ['required', 'string', 'max:40', 'regex:/^[A-Z0-9_-]+$/'];
+
+        if (! $fromEnvironment) {
+            $adminCodeRules[] = 'unique:administrators,admin_code';
+        }
 
         $validator = Validator::make([
             'admin_code' => $adminCode,
             'password' => $password,
             'password_confirmation' => $confirmation,
         ], [
-            'admin_code' => ['required', 'string', 'max:40', 'regex:/^[A-Z0-9_-]+$/', 'unique:administrators,admin_code'],
+            'admin_code' => $adminCodeRules,
             'password' => ['required', 'string', 'max:255', 'confirmed', Password::defaults()],
         ]);
 
@@ -37,11 +52,27 @@ class CreateAdministratorCommand extends Command
             return self::FAILURE;
         }
 
-        AdministratorModel::query()->create([
-            'admin_code' => $adminCode,
-            'password' => $password,
-            'is_active' => true,
-        ]);
+        if ($fromEnvironment) {
+            $administrator = AdministratorModel::query()->firstOrCreate(
+                ['admin_code' => $adminCode],
+                [
+                    'password' => $password,
+                    'is_active' => true,
+                ],
+            );
+
+            if (! $administrator->wasRecentlyCreated) {
+                $this->info('Administrador de bootstrap já existe. Nenhuma credencial foi alterada.');
+
+                return self::SUCCESS;
+            }
+        } else {
+            AdministratorModel::query()->create([
+                'admin_code' => $adminCode,
+                'password' => $password,
+                'is_active' => true,
+            ]);
+        }
 
         $this->info('Administrador criado com sucesso.');
 
